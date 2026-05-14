@@ -1,0 +1,102 @@
+═══════════════════════════════════════════════════════════════════
+                    CRONUX-CRX INSTALLER v1.0.0
+                    Software Libre y de Código Abierto
+═══════════════════════════════════════════════════════════════════
+
+¡BIENVENIDO A CRONUX-CRX!
+
+Este es un software LIBRE, GRATUITO y de CÓDIGO ABIERTO.
+
+═══════════════════════════════════════════════════════════════════
+                        INFORMACIÓN DE SEGURIDAD
+═══════════════════════════════════════════════════════════════════
+
+✓ SIN MALWARE: Este software ha sido desarrollado con transparencia
+  total y no contiene ningún tipo de malware, spyware o código malicioso.
+
+✓ CÓDIGO ABIERTO: Puedes revisar el código fuente completo en:
+  https://github.com/tu-usuario/cronux-crx
+  
+✓ PRIVACIDAD: Cronux-CRX funciona 100% offline. No recopila datos,
+  no envía información a servidores externos, y respeta tu privacidad.
+
+✓ COMUNIDAD: Este proyecto es mantenido por una comunidad de
+  desarrolladores y educadores comprometidos con el software libre.
+
+═══════════════════════════════════════════════════════════════════
+                    INSTRUCCIONES DE INSTALACIÓN
+═══════════════════════════════════════════════════════════════════
+
+macOS puede mostrar una advertencia de seguridad al instalar este
+software porque no está firmado con un certificado de Apple Developer
+(que cuesta $99 USD anuales).
+
+ESTO ES NORMAL y no significa que el software sea peligroso.
+
+PASOS PARA INSTALAR:
+
+1. Haz doble clic en el archivo .pkg
+
+2. Si macOS muestra el mensaje:
+   "Cronux-CRX Installer está dañado y no puede abrirse"
+   
+   NO TE PREOCUPES. Sigue estos pasos:
+
+   a) Ve a: Preferencias del Sistema → Seguridad y Privacidad
+   
+   b) En la pestaña "General", verás un mensaje sobre el archivo
+      bloqueado
+   
+   c) Haz clic en "Abrir de todas formas"
+   
+   d) Confirma que deseas abrir el instalador
+
+3. Sigue las instrucciones del instalador
+
+4. ¡Listo! Ya puedes usar Cronux-CRX desde tu terminal
+
+═══════════════════════════════════════════════════════════════════
+                        VERIFICAR LA INSTALACIÓN
+═══════════════════════════════════════════════════════════════════
+
+Abre tu Terminal y ejecuta:
+
+    crx --version
+
+Deberías ver:
+    Cronux-CRX v0.1.0 Beta - Control de versiones local
+
+═══════════════════════════════════════════════════════════════════
+                        COMANDOS PRINCIPALES
+═══════════════════════════════════════════════════════════════════
+
+crx new <nombre>           Crear nuevo proyecto
+crx save -m "mensaje"      Guardar versión
+crx log                    Ver historial
+crx restore <version>      Restaurar versión
+crx status                 Ver estado del proyecto
+crx --version              Ver versión instalada
+
+═══════════════════════════════════════════════════════════════════
+                            DESINSTALAR
+═══════════════════════════════════════════════════════════════════
+
+Si deseas desinstalar Cronux-CRX, ejecuta en tu Terminal:
+
+    sudo /usr/local/cronux/uninstall.sh
+
+═══════════════════════════════════════════════════════════════════
+                        SOPORTE Y COMUNIDAD
+═══════════════════════════════════════════════════════════════════
+
+¿Necesitas ayuda? Únete a nuestra comunidad:
+
+• Documentación: https://cronux.dev/documentacion.html
+• GitHub: https://github.com/tu-usuario/cronux-crx
+• Comunidad: https://cronux.dev/comunidad.html
+
+═══════════════════════════════════════════════════════════════════
+
+Gracias por usar Cronux-CRX y apoyar el software libre.
+
+═══════════════════════════════════════════════════════════════════

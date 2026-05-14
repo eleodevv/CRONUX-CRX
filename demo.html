@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo Interactivo - CRONUX-CRX</title>
+    <link rel="stylesheet" href="demo.css">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body>
+    <!-- Back to Home Button -->
+    <a href="index.html" class="back-to-home">
+        <i data-lucide="arrow-left"></i>
+        Volver al inicio
+    </a>
+
+    <!-- Pantalla de Inicio -->
+    <div id="homeScreen" class="screen">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <img src="svg/hexagon_logo.svg" class="logo-icon" width="32" height="32" alt="CRONUX-CRX">
+                    <span class="logo-text">CRONUX-CRX</span>
+                </div>
+                <div class="header-actions">
+                    <button class="icon-btn" id="themeToggle" title="Cambiar tema">
+                        <i data-lucide="sun" id="themeIcon"></i>
+                    </button>
+                    <button class="icon-btn" id="importBtn" title="Importar proyecto">
+                        <i data-lucide="upload"></i>
+                    </button>
+                    <button class="icon-btn" id="cleanBtn" title="Limpiar lista">
+                        <i data-lucide="trash-2"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="empty-state">
+            <img src="svg/hexagon_logo.svg" class="empty-logo" width="120" height="120" alt="CRONUX-CRX">
+            <h2>No hay proyectos</h2>
+            <p>Comienza creando un nuevo proyecto o abre uno existente</p>
+            <div class="empty-actions">
+                <button class="btn-primary" id="createProjectBtn">
+                    <i data-lucide="plus"></i>
+                    Crear proyecto
+                </button>
+                <button class="btn-secondary" id="openProjectBtn">
+                    <i data-lucide="folder-open"></i>
+                    Abrir proyecto
+                </button>
+            </div>
+        </div>
+
+        <!-- Projects List -->
+        <div id="projectsList" class="projects-container" style="display: none;">
+            <div class="toolbar">
+                <div class="toolbar-header">
+                    <span class="toolbar-title">Proyectos</span>
+                    <div class="toolbar-actions">
+                        <button class="btn-primary-small" id="newProjectBtn">
+                            <i data-lucide="plus"></i>
+                            Nuevo
+                        </button>
+                        <button class="btn-secondary-small" id="openProjectBtn2">
+                            <i data-lucide="folder-open"></i>
+                            Abrir
+                        </button>
+                    </div>
+                </div>
+                <div class="search-container">
+                    <input type="text" id="searchInput" placeholder="Buscar proyectos..." class="search-input">
+                </div>
+            </div>
+            <div class="projects-grid" id="projectsGrid">
+                <!-- Projects will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Project View Screen -->
+    <div id="projectScreen" class="screen" style="display: none;">
+        <!-- Header -->
+        <header class="project-header">
+            <div class="project-header-content">
+                <button class="icon-btn-back" id="backBtn">
+                    <i data-lucide="arrow-left"></i>
+                </button>
+                <div class="project-title-section">
+                    <i data-lucide="folder"></i>
+                    <span id="projectTitle">Mi Proyecto</span>
+                    <button class="icon-btn-small">
+                        <i data-lucide="edit-2"></i>
+                    </button>
+                </div>
+                <div class="spacer"></div>
+                <button class="icon-btn" title="Actualizar">
+                    <i data-lucide="refresh-cw"></i>
+                </button>
+                <button class="icon-btn" title="Estadísticas">
+                    <i data-lucide="bar-chart-2"></i>
+                </button>
+                <button class="icon-btn" title="Exportar">
+                    <i data-lucide="download"></i>
+                </button>
+                <button class="btn-primary-small" id="saveVersionBtn">
+                    <i data-lucide="save"></i>
+                    Guardar versión
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content: Timeline + Details -->
+        <div class="project-content">
+            <!-- Timeline Sidebar -->
+            <aside class="timeline-sidebar">
+                <div class="timeline-container" id="timelineContainer">
+                    <!-- Timeline items will be loaded here -->
+                </div>
+            </aside>
+
+            <!-- Divider -->
+            <div class="divider"></div>
+
+            <!-- Details Panel -->
+            <main class="details-panel">
+                <div class="details-container" id="detailsContainer">
+                    <!-- Version cards will be loaded here -->
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal: New Project -->
+    <div class="modal" id="newProjectModal">
+        <div class="modal-overlay" onclick="closeModal('newProjectModal')"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Crear Nuevo Proyecto</h3>
+                <button class="close-btn" onclick="closeModal('newProjectModal')">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Nombre del proyecto</label>
+                    <input type="text" id="projectNameInput" placeholder="mi-proyecto">
+                </div>
+                <div class="form-group">
+                    <label>Tipo</label>
+                    <select id="projectTypeInput">
+                        <option value="software">Software</option>
+                        <option value="documentos">Documentos</option>
+                        <option value="imagenes">Imágenes</option>
+                        <option value="diseno">Diseño</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal('newProjectModal')">Cancelar</button>
+                <button class="btn-primary" id="confirmCreateBtn">Crear</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Save Version -->
+    <div class="modal" id="saveVersionModal">
+        <div class="modal-overlay" onclick="closeModal('saveVersionModal')"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Guardar Nueva Versión</h3>
+                <button class="close-btn" onclick="closeModal('saveVersionModal')">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Descripción</label>
+                    <textarea id="versionDescInput" placeholder="Describe los cambios..." rows="4"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal('saveVersionModal')">Cancelar</button>
+                <button class="btn-primary" id="confirmSaveBtn">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast">
+        <i data-lucide="check-circle" id="toastIcon"></i>
+        <span id="toastMessage"></span>
+    </div>
+
+    <script src="demo.js"></script>
+</body>
+</html>

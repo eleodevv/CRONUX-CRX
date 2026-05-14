@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guía de Instalación macOS - Cronux-CRX</title>
+    <link rel="stylesheet" href="guia.css">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body>
+    <div class="bg-gradient"></div>
+
+    <header>
+        <div class="navegacion">
+            <div class="logo">
+                <svg class="logo-icon" width="32" height="32" viewBox="0 0 32 32" fill="none">
+                    <path d="M16 2L26 8V24L16 30L6 24V8L16 2Z" fill="currentColor" />
+                </svg>
+                <div class="logo-text">Cronux-CRX</div>
+            </div>
+            <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <nav class="enlaces" id="navMenu">
+                <a href="index.html" class="nav-link">Inicio</a>
+                <a href="documentacion.html" class="nav-link">Documentación</a>
+                <a href="descarga.html" class="nav-link">Descarga</a>
+            </nav>
+            <div class="header-actions">
+                <button class="get-started-btn" onclick="window.location.href='demo.html'">Demo</button>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <div class="guide-header">
+                <a href="descarga.html" class="back-link">
+                    <i data-lucide="arrow-left"></i>
+                    <span>Volver a Descargas</span>
+                </a>
+                <div class="guide-title">
+                    <img src="img/MacOS_icono.png" alt="macOS" class="os-icon">
+                    <div>
+                        <h1>Guía de Instalación para macOS</h1>
+                        <p>Instrucciones paso a paso para instalar Cronux-CRX en macOS 10.15+</p>
+                    </div>
+                </div>
+                <div class="guide-actions">
+                    <a href="CRONUX-CRX_Guia_Instalacion_macOS.pdf" download class="btn-download">
+                        <i data-lucide="download"></i>
+                        <span>Descargar PDF</span>
+                    </a>
+                    <a href="https://github.com/eleodevv/cronux/releases/download/v0.1.0/Cronux-CRX-Installer.pkg" class="btn-installer">
+                        <i data-lucide="package"></i>
+                        <span>Descargar Instalador CLI</span>
+                    </a>
+                    <a href="https://github.com/eleodevv/cronux/releases/download/v0.1.0/CRONUX-CRX.dmg" class="btn-installer">
+                        <i data-lucide="monitor"></i>
+                        <span>Descargar Instalador UI</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="pdf-viewer">
+                <iframe src="CRONUX-CRX_Guia_Instalacion_macOS.pdf" frameborder="0"></iframe>
+            </div>
+
+            <div class="pdf-fallback">
+                <i data-lucide="file-text"></i>
+                <p>Si no puedes ver el PDF, puedes descargarlo directamente:</p>
+                <a href="CRONUX-CRX_Guia_Instalacion_macOS.pdf" download class="btn-fallback">
+                    <i data-lucide="download"></i>
+                    <span>Descargar Guía PDF</span>
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        lucide.createIcons();
+
+        // Mobile menu toggle
+        const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+        const navMenu = document.getElementById('navMenu');
+        
+        if (mobileMenuToggle) {
+            mobileMenuToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                mobileMenuToggle.classList.toggle('active');
+                navMenu.classList.toggle('active');
+                document.body.classList.toggle('menu-open');
+            });
+
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.addEventListener('click', () => {
+                    mobileMenuToggle.classList.remove('active');
+                    navMenu.classList.remove('active');
+                    document.body.classList.remove('menu-open');
+                });
+            });
+
+            document.addEventListener('click', (e) => {
+                if (document.body.classList.contains('menu-open') && 
+                    !e.target.closest('.navegacion') && 
+                    !e.target.closest('.header-actions')) {
+                    mobileMenuToggle.classList.remove('active');
+                    navMenu.classList.remove('active');
+                    document.body.classList.remove('menu-open');
+                }
+            });
+        }
+    </script>
+</body>
+</html>

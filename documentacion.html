@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentación - Cronux-CRX | Sistema de Control de Versiones Local</title>
+    <link rel="stylesheet" href="documentacion.css">
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+
+<body>
+
+
+    <header>
+        <div class="navegacion">
+            <div class="logo">
+                <svg class="logo-icon" width="32" height="32" viewBox="0 0 32 32" fill="none">
+                    <path d="M16 2L26 8V24L16 30L6 24V8L16 2Z" fill="currentColor" />
+                </svg>
+                <div class="logo-text">Cronux-CRX</div>
+            </div>
+            <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <nav class="enlaces" id="navMenu">
+                <a href="index.html" class="nav-link">Inicio</a>
+                <a href="documentacion.html" class="nav-link active">Documentación</a>
+                <a href="descarga.html" class="nav-link">Descarga</a>
+            </nav>
+            <div class="header-actions">
+                <button class="get-started-btn" onclick="window.location.href='demo.html'">Demo</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="documentation-main">
+        <!-- Hero de Documentación -->
+        <section class="docs-hero">
+            <div class="container">
+                <div class="docs-hero-content">
+                    <h1 class="docs-hero-title">
+                        Comandos de <span class="highlight">Cronux-CRX</span>
+                    </h1>
+                    <p class="docs-hero-subtitle">
+                        Referencia completa de todos los comandos disponibles en Cronux-CRX (Cronux Control de Revisiones eXtendido).
+                        Copia y usa los comandos directamente en tu terminal.
+                    </p>
+                    <div class="docs-hero-actions">
+                        <a href="#commands" class="primary-button">
+                            <i data-lucide="terminal"></i>
+                            Ver Comandos
+                        </a>
+                        <a href="index.html" class="secondary-button">
+                            <i data-lucide="arrow-left"></i>
+                            Volver al Inicio
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="docs-container">
+            <!-- Contenido principal -->
+            <div class="docs-content full-width">
+                <!-- Instalación Rápida -->
+                <section class="docs-section">
+                    <h2 class="section-title">
+                        <i data-lucide="download"></i>
+                        Instalación Rápida
+                    </h2>
+                    <p class="section-intro">
+                        Antes de usar los comandos, asegúrate de tener Cronux-CRX instalado en tu sistema.
+                    </p>
+
+                    <div class="install-quick">
+                        <div class="install-step">
+                            <span class="step-number">1</span>
+                            <div class="step-content">
+                                <h4>Descarga Cronux-CRX</h4>
+                                <p>Obtén la última versión desde la <a href="descarga.html" class="inline-link">página
+                                        de descargas</a></p>
+                            </div>
+                        </div>
+                        <div class="install-step">
+                            <span class="step-number">2</span>
+                            <div class="step-content">
+                                <h4>Instala y configura</h4>
+                                <p>Sigue las instrucciones de instalación para tu sistema operativo</p>
+                            </div>
+                        </div>
+                        <div class="install-step">
+                            <span class="step-number">3</span>
+                            <div class="step-content">
+                                <h4>¡Listo para usar!</h4>
+                                <p>Ahora puedes usar todos los comandos que se muestran a continuación</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Referencia de Comandos -->
+                <section id="commands" class="docs-section"></section>
+                <h2 class="section-title">
+                    <i data-lucide="terminal"></i>
+                    Comandos Principales
+                </h2>
+                <p class="section-intro">
+                    Estos son los comandos esenciales que necesitas para usar Cronux-CRX. Haz clic en "Copiar" para usar
+                    cualquier comando directamente.
+                </p>
+
+                <div class="commands-grid">
+                    <!-- crx new -->
+                    <div id="crx-new" class="command-card">
+                        <div class="command-header">
+                            <h3 class="command-name">crx new</h3>
+                            <span class="command-category">Básico</span>
+                        </div>
+                        <p class="command-description">
+                            Crea un nuevo proyecto con control de versiones Cronux-CRX.
+                        </p>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span class="code-title">Sintaxis</span>
+                                <button class="copy-btn" data-command="crx new [nombre-proyecto]">
+                                    <i data-lucide="copy" class="copy-icon"></i>
+                                    <span class="copy-text">Copiar</span>
+                                </button>
+                            </div>
+                            <div class="code-content">
+                                <code>crx new [nombre-proyecto]</code>
+                            </div>
+                        </div>
+                        <div class="command-examples">
+                            <h4>Ejemplos:</h4>
+                            <div class="example-item">
+                                <code>crx new mi-proyecto</code>
+                                <span>Crea un proyecto llamado "mi-proyecto"</span>
+                            </div>
+                            <div class="example-item">
+                                <code>crx new tesis-universidad</code>
+                                <span>Crea un proyecto para tu tesis</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- crx save -->
+                    <div id="crx-save" class="command-card">
+                        <div class="command-header">
+                            <h3 class="command-name">crx save</h3>
+                            <span class="command-category">Básico</span>
+                        </div>
+                        <p class="command-description">
+                            Guarda una nueva versión del proyecto con un mensaje descriptivo.
+                        </p>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span class="code-title">Sintaxis</span>
+                                <button class="copy-btn" data-command="crx save -m &quot;mensaje&quot;">
+                                    <i data-lucide="copy" class="copy-icon"></i>
+                                    <span class="copy-text">Copiar</span>
+                                </button>
+                            </div>
+                            <div class="code-content">
+                                <code>crx save -m "mensaje"</code>
+                            </div>
+                        </div>
+                        <div class="command-examples">
+                            <h4>Ejemplos:</h4>
+                            <div class="example-item">
+                                <code>crx save -m "Primera versión"</code>
+                                <span>Guarda con un mensaje descriptivo</span>
+                            </div>
+                            <div class="example-item">
+                                <code>crx save -m "Capítulo 3 terminado"</code>
+                                <span>Ideal para proyectos académicos</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- crx log -->
+                    <div id="crx-log" class="command-card">
+                        <div class="command-header">
+                            <h3 class="command-name">crx log</h3>
+                            <span class="command-category">Consulta</span>
+                        </div>
+                        <p class="command-description">
+                            Muestra el historial completo de versiones del proyecto.
+                        </p>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span class="code-title">Sintaxis</span>
+                                <button class="copy-btn" data-command="crx log">
+                                    <i data-lucide="copy" class="copy-icon"></i>
+                                    <span class="copy-text">Copiar</span>
+                                </button>
+                            </div>
+                            <div class="code-content">
+                                <code>crx log</code>
+                            </div>
+                        </div>
+                        <div class="command-examples">
+                            <h4>Ejemplos:</h4>
+                            <div class="example-item">
+                                <code>crx log</code>
+                                <span>Muestra todas las versiones guardadas</span>
+                            </div>
+                            <div class="example-item">
+                                <code>crx log</code>
+                                <span>Perfecto para revisar tu progreso</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- crx restore -->
+                    <div id="crx-restore" class="command-card">
+                        <div class="command-header">
+                            <h3 class="command-name">crx restore</h3>
+                            <span class="command-category">Navegación</span>
+                        </div>
+                        <p class="command-description">
+                            Restaura el proyecto a una versión específica.
+                        </p>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span class="code-title">Sintaxis</span>
+                                <button class="copy-btn" data-command="crx restore [version]">
+                                    <i data-lucide="copy" class="copy-icon"></i>
+                                    <span class="copy-text">Copiar</span>
+                                </button>
+                            </div>
+                            <div class="code-content">
+                                <code>crx restore [version]</code>
+                            </div>
+                        </div>
+                        <div class="command-examples">
+                            <h4>Ejemplos:</h4>
+                            <div class="example-item">
+                                <code>crx restore 1.0</code>
+                                <span>Restaura a la versión 1.0</span>
+                            </div>
+                            <div class="example-item">
+                                <code>crx restore 2.5</code>
+                                <span>Restaura a la versión 2.5</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- crx status -->
+                    <div id="crx-status" class="command-card">
+                        <div class="command-header">
+                            <h3 class="command-name">crx status</h3>
+                            <span class="command-category">Consulta</span>
+                        </div>
+                        <p class="command-description">
+                            Muestra información del proyecto actual y archivos modificados.
+                        </p>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span class="code-title">Sintaxis</span>
+                                <button class="copy-btn" data-command="crx status">
+                                    <i data-lucide="copy" class="copy-icon"></i>
+                                    <span class="copy-text">Copiar</span>
+                                </button>
+                            </div>
+                            <div class="code-content">
+                                <code>crx status</code>
+                            </div>
+                        </div>
+                        <div class="command-examples">
+                            <h4>Ejemplos:</h4>
+                            <div class="example-item">
+                                <code>crx status</code>
+                                <span>Muestra el estado actual del proyecto</span>
+                            </div>
+                            <div class="example-item">
+                                <code>crx status</code>
+                                <span>Ideal para revisar cambios pendientes</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- crx --version -->
+                    <div id="crx-version" class="command-card">
+                        <div class="command-header">
+                            <h3 class="command-name">crx --version</h3>
+                            <span class="command-category">Información</span>
+                        </div>
+                        <p class="command-description">
+                            Muestra la versión instalada de Cronux-CRX.
+                        </p>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span class="code-title">Sintaxis</span>
+                                <button class="copy-btn" data-command="crx --version">
+                                    <i data-lucide="copy" class="copy-icon"></i>
+                                    <span class="copy-text">Copiar</span>
+                                </button>
+                            </div>
+                            <div class="code-content">
+                                <code>crx --version</code>
+                            </div>
+                        </div>
+                        <div class="command-examples">
+                            <h4>Resultado:</h4>
+                            <div class="example-item">
+                                <code>Cronux-CRX v0.1.0 Beta - Control de versiones local</code>
+                                <span>Muestra la versión actual instalada</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- crx help -->
+                    <div id="crx-help" class="command-card">
+                        <div class="command-header">
+                            <h3 class="command-name">crx help</h3>
+                            <span class="command-category">Ayuda</span>
+                        </div>
+                        <p class="command-description">
+                            Muestra la ayuda completa con todos los comandos disponibles.
+                        </p>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span class="code-title">Sintaxis</span>
+                                <button class="copy-btn" data-command="crx help">
+                                    <i data-lucide="copy" class="copy-icon"></i>
+                                    <span class="copy-text">Copiar</span>
+                                </button>
+                            </div>
+                            <div class="code-content">
+                                <code>crx help</code>
+                            </div>
+                        </div>
+                        <div class="command-examples">
+                            <h4>Ejemplos:</h4>
+                            <div class="example-item">
+                                <code>crx help</code>
+                                <span>Muestra todos los comandos disponibles</span>
+                            </div>
+                            <div class="example-item">
+                                <code>crx help</code>
+                                <span>Perfecto cuando necesitas recordar la sintaxis</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Desinstalar -->
+                    <div id="uninstall" class="command-card">
+                        <div class="command-header">
+                            <h3 class="command-name">Desinstalar</h3>
+                            <span class="command-category">Sistema</span>
+                        </div>
+                        <p class="command-description">
+                            Elimina completamente Cronux-CRX de tu sistema (macOS/Linux).
+                        </p>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span class="code-title">Sintaxis</span>
+                                <button class="copy-btn" data-command="sudo /usr/local/cronux/uninstall.sh">
+                                    <i data-lucide="copy" class="copy-icon"></i>
+                                    <span class="copy-text">Copiar</span>
+                                </button>
+                            </div>
+                            <div class="code-content">
+                                <code>sudo /usr/local/cronux/uninstall.sh</code>
+                            </div>
+                        </div>
+                        <div class="command-examples">
+                            <h4>Nota:</h4>
+                            <div class="example-item">
+                                <code>sudo /usr/local/cronux/uninstall.sh</code>
+                                <span>Requiere permisos de administrador</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Inicializar iconos de Lucide
+        lucide.createIcons();
+
+        // Navegación suave
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Actualizar navegación activa
+        const navItems = document.querySelectorAll('.nav-item');
+        const sections = document.querySelectorAll('.docs-section');
+
+        function updateActiveNav() {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (scrollY >= (sectionTop - 200)) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navItems.forEach(item => {
+                item.classList.remove('active');
+                if (item.getAttribute('href') === '#' + current) {
+                    item.classList.add('active');
+                }
+            });
+        }
+
+        window.addEventListener('scroll', updateActiveNav);
+
+        // Funcionalidad mejorada de copiar código
+        document.querySelectorAll('.copy-btn').forEach(button => {
+            button.addEventListener('click', function () {
+                const command = this.getAttribute('data-command');
+                const icon = this.querySelector('.copy-icon');
+                const text = this.querySelector('.copy-text');
+
+                navigator.clipboard.writeText(command).then(() => {
+                    // Cambiar a estado de éxito
+                    icon.setAttribute('data-lucide', 'check');
+                    text.textContent = '¡Copiado!';
+                    this.classList.add('copied');
+                    lucide.createIcons();
+
+                    // Volver al estado original después de 2 segundos
+                    setTimeout(() => {
+                        icon.setAttribute('data-lucide', 'copy');
+                        text.textContent = 'Copiar';
+                        this.classList.remove('copied');
+                        lucide.createIcons();
+                    }, 2000);
+                }).catch(() => {
+                    // Fallback si no se puede copiar
+                    text.textContent = 'Error';
+                    setTimeout(() => {
+                        text.textContent = 'Copiar';
+                    }, 1000);
+                });
+            });
+        });
+
+        // Mobile menu toggle
+        const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+        const navMenu = document.getElementById('navMenu');
+        
+        if (mobileMenuToggle) {
+            mobileMenuToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                mobileMenuToggle.classList.toggle('active');
+                navMenu.classList.toggle('active');
+                document.body.classList.toggle('menu-open');
+            });
+
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.addEventListener('click', () => {
+                    mobileMenuToggle.classList.remove('active');
+                    navMenu.classList.remove('active');
+                    document.body.classList.remove('menu-open');
+                });
+            });
+
+            document.addEventListener('click', (e) => {
+                if (document.body.classList.contains('menu-open') && 
+                    !e.target.closest('.navegacion') && 
+                    !e.target.closest('.header-actions')) {
+                    mobileMenuToggle.classList.remove('active');
+                    navMenu.classList.remove('active');
+                    document.body.classList.remove('menu-open');
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>
