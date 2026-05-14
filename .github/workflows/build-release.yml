@@ -11,6 +11,10 @@ on:
         required: true
         default: 'v0.2.0'
 
+permissions:
+  contents: write
+  packages: write
+
 jobs:
 
   # ── Linux: .deb CLI + GUI ──────────────────────────────
