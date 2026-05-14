@@ -77,6 +77,7 @@ jobs:
             --windowed \
             --name "cronux-crx-gui" \
             --add-data "cronux_cli/assets:assets" \
+            --icon "cronux_cli/assets/cronux_icon.png" \
             --clean \
             cronux_cli/ui/cronux_ui_v2.py
 
