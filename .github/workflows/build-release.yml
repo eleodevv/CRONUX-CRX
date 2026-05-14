@@ -28,8 +28,22 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Configure Flutter
         run: |
+          flutter config --no-analytics
+          flutter precache --linux
+          flutter doctor -v
+
+      - name: Install Flet and dependencies
+        run: |
+          python -m pip install --upgrade pip
           pip install flet
           sudo apt-get install -y dpkg-dev
 
@@ -67,14 +81,35 @@ jobs:
           dpkg-deb --build deb-cli "cronux-crx-cli_${VERSION}_all.deb"
 
       - name: Build GUI .deb
+        env:
+          FLET_CLI_NO_RICH_OUTPUT: "true"
         run: |
           VERSION="${{ github.ref_name || github.event.inputs.version }}"
           VERSION="${VERSION#v}"
 
           # Build GUI con Flet nativo
           cd cronux_cli/ui
-          flet build linux --verbose
+          flet build linux \
+            --module-name "cronux_ui_v2" \
+            --product "CRONUX-CRX" \
+            --project cronux-crx \
+            --build-version "${VERSION}" \
+            --build-number "${{ github.run_number }}" \
+            --org "dev.cronux" \
+            --bundle-id "dev.cronux.crx" \
+            --description "Sistema de Control de Versiones Local" \
+            --copyright "Copyright © 2024 CRONUX-CRX" \
+            --yes \
+            --no-rich-output
           cd ../..
+
+          # Encontrar el ejecutable
+          EXEC_PATH=$(find cronux_cli/ui/build -name "cronux_ui_v2" -type f | head -1)
+          if [ -z "$EXEC_PATH" ]; then
+            echo "❌ Executable not found"
+            exit 1
+          fi
+          echo "✅ Executable found: $EXEC_PATH"
 
           # Estructura del paquete .deb
           mkdir -p deb-gui/DEBIAN
@@ -82,8 +117,8 @@ jobs:
           mkdir -p deb-gui/usr/share/applications
           mkdir -p deb-gui/usr/share/icons/hicolor/256x256/apps
 
-          # Copiar ejecutable (Flet genera en build/linux/)
-          cp cronux_cli/ui/build/linux/cronux_ui_v2 deb-gui/usr/local/bin/cronux-crx-gui
+          # Copiar ejecutable
+          cp "$EXEC_PATH" deb-gui/usr/local/bin/cronux-crx-gui
           chmod +x deb-gui/usr/local/bin/cronux-crx-gui
 
           # Copiar icono
@@ -131,8 +166,23 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
-        run: pip install flet
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Configure Flutter
+        run: |
+          flutter config --no-analytics
+          flutter precache --macos
+          flutter doctor -v
+
+      - name: Install Flet
+        run: |
+          python -m pip install --upgrade pip
+          pip install flet
 
       - name: Build CLI .pkg
         run: |
@@ -158,22 +208,54 @@ jobs:
             "Cronux-CRX-CLI-Installer.pkg"
 
       - name: Build GUI .app
+        env:
+          FLET_CLI_NO_RICH_OUTPUT: "true"
         run: |
           cd cronux_cli/ui
-          flet build macos --verbose
+          flet build macos \
+            --module-name "cronux_ui_v2" \
+            --product "CRONUX-CRX" \
+            --project cronux-crx \
+            --build-version "${{ github.ref_name || github.event.inputs.version }}" \
+            --build-number "${{ github.run_number }}" \
+            --org "dev.cronux" \
+            --bundle-id "dev.cronux.crx" \
+            --description "Sistema de Control de Versiones Local" \
+            --copyright "Copyright © 2024 CRONUX-CRX" \
+            --yes \
+            --no-rich-output
           cd ../..
+
+      - name: Find and sign app
+        run: |
+          APP_PATH=$(find cronux_cli/ui/build -name "*.app" -type d | head -1)
+          if [ -n "$APP_PATH" ]; then
+            echo "✅ App found: $APP_PATH"
+            echo "APP_PATH=$APP_PATH" >> $GITHUB_ENV
+            # Ad-hoc signature
+            codesign --force --deep --sign - "$APP_PATH"
+            codesign --verify --deep --verbose=2 "$APP_PATH"
+          else
+            echo "❌ App not found"
+            exit 1
+          fi
 
       - name: Create .dmg
         run: |
           VERSION="${{ github.ref_name || github.event.inputs.version }}"
           VERSION="${VERSION#v}"
-
-          # Crear carpeta temporal para el DMG
-          mkdir -p dmg-temp
-          cp -r cronux_cli/ui/build/macos/cronux_ui_v2.app dmg-temp/CRONUX-CRX.app
-
-          # Crear DMG
-          hdiutil create -volname "CRONUX-CRX" -srcfolder dmg-temp -ov -format UDZO "CRONUX-CRX-${VERSION}.dmg"
+          
+          DMG_NAME="CRONUX-CRX-${VERSION}"
+          DMG_DIR="dmg_staging"
+          
+          mkdir -p "$DMG_DIR"
+          cp -R "$APP_PATH" "$DMG_DIR/"
+          ln -s /Applications "$DMG_DIR/Applications"
+          
+          hdiutil create -volname "CRONUX-CRX" -srcfolder "$DMG_DIR" -ov -format UDZO -imagekey zlib-level=9 "${DMG_NAME}.dmg"
+          
+          rm -rf "$DMG_DIR"
+          echo "✅ DMG created: ${DMG_NAME}.dmg"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -195,27 +277,37 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install flet
+        run: pip install flet pyinstaller pillow
 
       - name: Build CLI Installer .exe
         run: |
-          cd cronux_cli
-          flet build windows --verbose --product "CRONUX CLI Installer" installer_windows_cli.py
-          cd ..
-          mv cronux_cli/build/windows/installer_windows_cli.exe CRONUX-CLI-INSTALLER.exe
+          python -m PyInstaller `
+            --onefile `
+            --windowed `
+            --name "CRONUX-CLI-INSTALLER" `
+            --add-data "cronux_cli/cli;cli" `
+            --add-data "cronux_cli/assets;assets" `
+            --icon "cronux_cli/assets/cronux_icon.ico" `
+            --clean `
+            cronux_cli/installer_windows_cli.py
 
       - name: Build GUI .exe
         run: |
-          cd cronux_cli/ui
-          flet build windows --verbose --product "CRONUX-CRX"
-          cd ../..
-          mv cronux_cli/ui/build/windows/cronux_ui_v2.exe CRONUX-CRX.exe
+          python -m PyInstaller `
+            --onefile `
+            --windowed `
+            --name "CRONUX-CRX" `
+            --add-data "cronux_cli/ui;ui" `
+            --add-data "cronux_cli/assets;assets" `
+            --icon "cronux_cli/assets/cronux_icon.ico" `
+            --clean `
+            cronux_cli/ui/cronux_ui_v2.py
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: windows-packages
-          path: "*.exe"
+          path: dist/*.exe
 
   # ── Release ────────────────────────────────────────────
   release:
