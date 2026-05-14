@@ -276,8 +276,22 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
-        run: pip install flet pyinstaller pillow
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Configure Flutter
+        run: |
+          flutter config --no-analytics
+          flutter doctor -v
+
+      - name: Install Flet and dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flet pillow
 
       - name: Build CLI Installer .exe
         run: |
@@ -292,16 +306,44 @@ jobs:
             cronux_cli/installer_windows_cli.py
 
       - name: Build GUI .exe
+        env:
+          FLET_CLI_NO_RICH_OUTPUT: "true"
         run: |
-          python -m PyInstaller `
-            --onefile `
-            --windowed `
-            --name "CRONUX-CRX" `
-            --add-data "cronux_cli/ui;ui" `
-            --add-data "cronux_cli/assets;assets" `
-            --icon "cronux_cli/assets/cronux_icon.ico" `
-            --clean `
-            cronux_cli/ui/cronux_ui_v2.py
+          cd cronux_cli/ui
+          flet build windows `
+            --module-name "cronux_ui_v2" `
+            --product "CRONUX-CRX" `
+            --project cronux-crx `
+            --build-version "${{ github.ref_name || github.event.inputs.version }}" `
+            --build-number "${{ github.run_number }}" `
+            --org "dev.cronux" `
+            --bundle-id "dev.cronux.crx" `
+            --description "Sistema de Control de Versiones Local" `
+            --copyright "Copyright © 2024 CRONUX-CRX" `
+            --yes `
+            --no-rich-output
+          cd ../..
+
+      - name: Find and copy executables
+        run: |
+          # Find GUI executable
+          $guiExe = Get-ChildItem -Path "cronux_cli/ui/build" -Filter "*.exe" -Recurse | Select-Object -First 1
+          if ($guiExe) {
+            Write-Host "✅ GUI executable found: $($guiExe.FullName)"
+            New-Item -ItemType Directory -Force -Path "dist"
+            Copy-Item $guiExe.FullName -Destination "dist/CRONUX-CRX.exe"
+          } else {
+            Write-Host "❌ GUI executable not found"
+            exit 1
+          }
+          
+          # CLI installer should be in dist/ from PyInstaller
+          if (Test-Path "dist/CRONUX-CLI-INSTALLER.exe") {
+            Write-Host "✅ CLI installer found"
+          } else {
+            Write-Host "❌ CLI installer not found"
+            exit 1
+          }
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
