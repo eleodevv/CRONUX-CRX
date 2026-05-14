@@ -102,12 +102,32 @@ jobs:
             --copyright "Copyright © 2024 CRONUX-CRX" \
             --yes \
             --no-rich-output
+          
+          # Listar contenido del build para debug
+          echo "📂 Contenido de build/linux:"
+          find build -type f -executable 2>/dev/null || echo "No executables found with -executable flag"
+          echo "📂 Todos los archivos en build:"
+          find build -type f 2>/dev/null || echo "Build directory not found"
+          
           cd ../..
 
-          # Encontrar el ejecutable
-          EXEC_PATH=$(find cronux_cli/ui/build -name "cronux_ui_v2" -type f | head -1)
+          # Buscar el ejecutable (puede estar en diferentes ubicaciones)
+          EXEC_PATH=$(find cronux_cli/ui/build/linux -type f -executable 2>/dev/null | grep -E "(cronux|CRONUX)" | head -1)
+          
+          # Si no se encuentra con -executable, buscar por nombre
+          if [ -z "$EXEC_PATH" ]; then
+            EXEC_PATH=$(find cronux_cli/ui/build/linux -type f 2>/dev/null | grep -E "(cronux|CRONUX)" | head -1)
+          fi
+          
+          # Si aún no se encuentra, buscar cualquier ejecutable
+          if [ -z "$EXEC_PATH" ]; then
+            EXEC_PATH=$(find cronux_cli/ui/build/linux -type f -executable 2>/dev/null | head -1)
+          fi
+          
           if [ -z "$EXEC_PATH" ]; then
             echo "❌ Executable not found"
+            echo "📂 Full build directory structure:"
+            ls -laR cronux_cli/ui/build/ || echo "Build directory doesn't exist"
             exit 1
           fi
           echo "✅ Executable found: $EXEC_PATH"
