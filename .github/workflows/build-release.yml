@@ -88,6 +88,11 @@ jobs:
           VERSION="${{ github.ref_name || github.event.inputs.version }}"
           VERSION="${VERSION#v}"
 
+          # Copiar módulos CLI a la carpeta UI para que Flet los incluya
+          echo "📦 Copiando módulos CLI..."
+          mkdir -p cronux_cli/ui/cli
+          cp cronux_cli/cli/*.py cronux_cli/ui/cli/
+
           # Build GUI con Flet nativo
           cd cronux_cli/ui
           flet build linux \
@@ -254,6 +259,11 @@ jobs:
         env:
           FLET_CLI_NO_RICH_OUTPUT: "true"
         run: |
+          # Copiar módulos CLI a la carpeta UI para que Flet los incluya
+          echo "📦 Copiando módulos CLI..."
+          mkdir -p cronux_cli/ui/cli
+          cp cronux_cli/cli/*.py cronux_cli/ui/cli/
+          
           cd cronux_cli/ui
           flet build macos \
             --module-name "cronux_ui_v2" \
@@ -352,6 +362,11 @@ jobs:
         env:
           FLET_CLI_NO_RICH_OUTPUT: "true"
         run: |
+          # Copiar módulos CLI a la carpeta UI para que Flet los incluya
+          Write-Host "📦 Copiando módulos CLI..."
+          New-Item -ItemType Directory -Force -Path "cronux_cli/ui/cli"
+          Copy-Item "cronux_cli/cli/*.py" -Destination "cronux_cli/ui/cli/"
+          
           cd cronux_cli/ui
           flet build windows `
             --module-name "cronux_ui_v2" `
