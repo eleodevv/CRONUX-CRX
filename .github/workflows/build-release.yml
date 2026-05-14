@@ -103,25 +103,25 @@ jobs:
             --yes \
             --no-rich-output
           
-          # Listar contenido del build para debug
-          echo "📂 Estructura completa de build:"
-          ls -laR build/
+          # Listar estructura para encontrar el bundle
+          echo "📂 Buscando bundle en build/linux:"
+          ls -la build/linux/ || echo "No build/linux directory"
           
           cd ../..
 
-          # Buscar el bundle completo (carpeta con el ejecutable y librerías)
-          BUNDLE_DIR=$(find cronux_cli/ui/build/linux -type d -name "release" | head -1)
+          # El bundle está en build/linux/ directamente
+          BUNDLE_DIR="cronux_cli/ui/build/linux"
           
-          if [ -z "$BUNDLE_DIR" ]; then
-            echo "❌ Bundle directory not found"
-            echo "📂 Searching for bundle in build/linux:"
-            find cronux_cli/ui/build/linux -type d
+          if [ ! -d "$BUNDLE_DIR" ]; then
+            echo "❌ Bundle directory not found at $BUNDLE_DIR"
+            echo "📂 Available directories:"
+            find cronux_cli/ui/build -type d -maxdepth 2
             exit 1
           fi
           
           echo "✅ Bundle found: $BUNDLE_DIR"
           echo "📦 Bundle contents:"
-          ls -lah "$BUNDLE_DIR/bundle/"
+          ls -lah "$BUNDLE_DIR/"
 
           # Estructura del paquete .deb
           mkdir -p deb-gui/DEBIAN
@@ -130,12 +130,31 @@ jobs:
           mkdir -p deb-gui/usr/share/applications
           mkdir -p deb-gui/usr/share/icons/hicolor/256x256/apps
 
-          # Copiar el bundle completo (incluye ejecutable, librerías, assets)
-          cp -r "$BUNDLE_DIR/bundle/"* deb-gui/opt/cronux-crx/
+          # Copiar el bundle completo
+          echo "📦 Copiando bundle completo..."
+          cp -r "$BUNDLE_DIR/"* deb-gui/opt/cronux-crx/
           
-          # Encontrar el ejecutable dentro del bundle
-          EXEC_NAME=$(find deb-gui/opt/cronux-crx -maxdepth 1 -type f -executable | head -1 | xargs basename)
-          echo "✅ Executable in bundle: $EXEC_NAME"
+          # Verificar tamaño del bundle copiado
+          echo "📊 Tamaño del bundle:"
+          du -sh deb-gui/opt/cronux-crx/
+          
+          # Buscar el ejecutable principal
+          EXEC_PATH=$(find deb-gui/opt/cronux-crx -maxdepth 1 -type f -executable -name "cronux-crx" 2>/dev/null | head -1)
+          
+          if [ -z "$EXEC_PATH" ]; then
+            echo "⚠️  Ejecutable 'cronux-crx' no encontrado, buscando cualquier ejecutable..."
+            EXEC_PATH=$(find deb-gui/opt/cronux-crx -maxdepth 1 -type f -executable 2>/dev/null | head -1)
+          fi
+          
+          if [ -z "$EXEC_PATH" ]; then
+            echo "❌ No se encontró ningún ejecutable"
+            echo "📂 Contenido de /opt/cronux-crx:"
+            ls -la deb-gui/opt/cronux-crx/
+            exit 1
+          fi
+          
+          EXEC_NAME=$(basename "$EXEC_PATH")
+          echo "✅ Ejecutable encontrado: $EXEC_NAME"
           
           # Crear wrapper script en /usr/local/bin
           cat > deb-gui/usr/local/bin/cronux-crx-gui << 'WRAPPER_EOF'
