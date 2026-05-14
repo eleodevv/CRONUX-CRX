@@ -30,7 +30,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install flet pyinstaller
+          pip install flet
           sudo apt-get install -y dpkg-dev
 
       - name: Build CLI .deb
@@ -71,15 +71,10 @@ jobs:
           VERSION="${{ github.ref_name || github.event.inputs.version }}"
           VERSION="${VERSION#v}"
 
-          # Build GUI con PyInstaller
-          python -m PyInstaller \
-            --onefile \
-            --windowed \
-            --name "cronux-crx-gui" \
-            --add-data "cronux_cli/assets:assets" \
-            --icon "cronux_cli/assets/cronux_icon.png" \
-            --clean \
-            cronux_cli/ui/cronux_ui_v2.py
+          # Build GUI con Flet nativo
+          cd cronux_cli/ui
+          flet build linux --verbose
+          cd ../..
 
           # Estructura del paquete .deb
           mkdir -p deb-gui/DEBIAN
@@ -87,13 +82,13 @@ jobs:
           mkdir -p deb-gui/usr/share/applications
           mkdir -p deb-gui/usr/share/icons/hicolor/256x256/apps
 
-          # Copiar ejecutable
-          cp dist/cronux-crx-gui deb-gui/usr/local/bin/
+          # Copiar ejecutable (Flet genera en build/linux/)
+          cp cronux_cli/ui/build/linux/cronux_ui_v2 deb-gui/usr/local/bin/cronux-crx-gui
           chmod +x deb-gui/usr/local/bin/cronux-crx-gui
 
           # Copiar icono
-          if [ -f cronux_cli/assets/hexagon_logo_256.png ]; then
-            cp cronux_cli/assets/hexagon_logo_256.png deb-gui/usr/share/icons/hicolor/256x256/apps/cronux-crx.png
+          if [ -f cronux_cli/assets/cronux_icon_256.png ]; then
+            cp cronux_cli/assets/cronux_icon_256.png deb-gui/usr/share/icons/hicolor/256x256/apps/cronux-crx.png
           fi
 
           # Desktop entry
@@ -115,7 +110,6 @@ jobs:
           Architecture: amd64
           Maintainer: CRONUX-CRX <contact@cronux.dev>
           Description: CRONUX-CRX GUI - Control de Versiones Local (Interfaz Gráfica)
-          Depends: python3
           EOF
 
           dpkg-deb --build deb-gui "cronux-crx-gui_${VERSION}_amd64.deb"
@@ -138,7 +132,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install flet pyinstaller
+        run: pip install flet
 
       - name: Build CLI .pkg
         run: |
@@ -165,14 +159,9 @@ jobs:
 
       - name: Build GUI .app
         run: |
-          python -m PyInstaller \
-            --onefile \
-            --windowed \
-            --name "CRONUX-CRX" \
-            --add-data "cronux_cli/assets:assets" \
-            --icon "cronux_cli/assets/cronux_cli.icns" \
-            --clean \
-            cronux_cli/ui/cronux_ui_v2.py
+          cd cronux_cli/ui
+          flet build macos --verbose
+          cd ../..
 
       - name: Create .dmg
         run: |
@@ -181,7 +170,7 @@ jobs:
 
           # Crear carpeta temporal para el DMG
           mkdir -p dmg-temp
-          cp -r "dist/CRONUX-CRX.app" dmg-temp/
+          cp -r cronux_cli/ui/build/macos/cronux_ui_v2.app dmg-temp/CRONUX-CRX.app
 
           # Crear DMG
           hdiutil create -volname "CRONUX-CRX" -srcfolder dmg-temp -ov -format UDZO "CRONUX-CRX-${VERSION}.dmg"
@@ -206,36 +195,27 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install flet pyinstaller pillow
+        run: pip install flet
 
       - name: Build CLI Installer .exe
         run: |
-          python -m PyInstaller `
-            --onefile `
-            --windowed `
-            --name "CRONUX-CLI-INSTALLER" `
-            --add-data "cronux_cli/cli;cli" `
-            --add-data "cronux_cli/assets;assets" `
-            --icon "cronux_cli/assets/cronux_icon.ico" `
-            --clean `
-            cronux_cli/installer_windows_cli.py
+          cd cronux_cli
+          flet build windows --verbose --product "CRONUX CLI Installer" installer_windows_cli.py
+          cd ..
+          mv cronux_cli/build/windows/installer_windows_cli.exe CRONUX-CLI-INSTALLER.exe
 
       - name: Build GUI .exe
         run: |
-          python -m PyInstaller `
-            --onefile `
-            --windowed `
-            --name "CRONUX-CRX" `
-            --add-data "cronux_cli/assets;assets" `
-            --icon "cronux_cli/assets/cronux_icon.ico" `
-            --clean `
-            cronux_cli/ui/cronux_ui_v2.py
+          cd cronux_cli/ui
+          flet build windows --verbose --product "CRONUX-CRX"
+          cd ../..
+          mv cronux_cli/ui/build/windows/cronux_ui_v2.exe CRONUX-CRX.exe
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: windows-packages
-          path: dist/*.exe
+          path: "*.exe"
 
   # ── Release ────────────────────────────────────────────
   release:
