@@ -7,7 +7,17 @@ import json
 from datetime import datetime
 
 # Agregar el directorio cli al path
-sys.path.insert(0, str(Path(__file__).parent.parent / "cli"))
+# Primero intentar desde la carpeta local (cuando está empaquetado)
+cli_local = Path(__file__).parent / "cli"
+cli_parent = Path(__file__).parent.parent / "cli"
+
+if cli_local.exists():
+    sys.path.insert(0, str(cli_local))
+elif cli_parent.exists():
+    sys.path.insert(0, str(cli_parent))
+else:
+    # Fallback: intentar importar directamente
+    pass
 
 from crear_proyecto import crear_proyecto_cli
 from guardar_version import guardar_version_cli
