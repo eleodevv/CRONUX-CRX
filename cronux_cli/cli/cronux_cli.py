@@ -150,85 +150,106 @@ def mostrar_ayuda():
 #  Modo interactivo (sin argumentos)
 # ─────────────────────────────────────────────
 def modo_interactivo():
-    print(SPLASH)
+    while True:  # Loop continuo
+        print(SPLASH)
 
-    en_proyecto = verificarCronux()
+        en_proyecto = verificarCronux()
 
-    if en_proyecto:
-        # Leer info del proyecto
-        import json
-        cronux_dir = Path.cwd() / ".cronux"
-        proyecto_json = cronux_dir / "proyecto.json"
-        nombre = "Proyecto"
-        tipo = "general"
-        num_versiones = 0
+        if en_proyecto:
+            # Leer info del proyecto
+            import json
+            cronux_dir = Path.cwd() / ".cronux"
+            proyecto_json = cronux_dir / "proyecto.json"
+            nombre = "Proyecto"
+            tipo = "general"
+            num_versiones = 0
 
-        if proyecto_json.exists():
-            with open(proyecto_json) as f:
-                datos = json.load(f)
-            nombre = datos.get("nombre", "Proyecto")
-            tipo = datos.get("tipo", "general")
+            if proyecto_json.exists():
+                with open(proyecto_json) as f:
+                    datos = json.load(f)
+                nombre = datos.get("nombre", "Proyecto")
+                tipo = datos.get("tipo", "general")
 
-        versiones_dir = cronux_dir / "versiones"
-        if versiones_dir.exists():
-            num_versiones = len(list(versiones_dir.glob("version_*")))
+            versiones_dir = cronux_dir / "versiones"
+            if versiones_dir.exists():
+                num_versiones = len(list(versiones_dir.glob("version_*")))
 
-        print(f"  {c(Color.BOLD, 'Proyecto:')}  {icono_tipo(tipo)} {c(Color.CYAN, nombre)}")
-        print(f"  {c(Color.BOLD, 'Tipo:')}      {tipo}")
-        print(f"  {c(Color.BOLD, 'Versiones:')} {num_versiones}")
-        linea()
+            print(f"  {c(Color.BOLD, 'Proyecto:')}  {icono_tipo(tipo)} {c(Color.CYAN, nombre)}")
+            print(f"  {c(Color.BOLD, 'Tipo:')}      {tipo}")
+            print(f"  {c(Color.BOLD, 'Versiones:')} {num_versiones}")
+            linea()
+            print()
+
+            opciones = [
+                ("💾", "Guardar versión"),
+                ("📜", "Ver historial"),
+                ("⏮️ ", "Restaurar versión"),
+                ("ℹ️ ", "Ver información"),
+                ("🗑️ ", "Eliminar proyecto"),
+                ("🚪", "Salir"),
+            ]
+        else:
+            warn("No estás en un proyecto Cronux")
+            print()
+            opciones = [
+                ("🚀", "Crear nuevo proyecto"),
+                ("🚪", "Salir"),
+            ]
+
+        for i, (ico, label) in enumerate(opciones, 1):
+            print(f"  {c(Color.CYAN, str(i) + '.')} {ico}  {label}")
+
+        print()
+        try:
+            eleccion = input(f"  {c(Color.GRAY, 'Selecciona una opción:')} ").strip()
+        except (KeyboardInterrupt, EOFError):
+            print()
+            break  # Salir del loop
+
         print()
 
-        opciones = [
-            ("💾", "Guardar versión"),
-            ("📜", "Ver historial"),
-            ("⏮️ ", "Restaurar versión"),
-            ("ℹ️ ", "Ver información"),
-            ("🗑️ ", "Eliminar proyecto"),
-            ("🚪", "Salir"),
-        ]
-    else:
-        warn("No estás en un proyecto Cronux")
+        # Variable para controlar si debe salir
+        debe_salir = False
+
+        if en_proyecto:
+            if eleccion == "1":
+                _cmd_guardar([])
+            elif eleccion == "2":
+                _cmd_historial()
+            elif eleccion == "3":
+                version = input(f"  {c(Color.GRAY, 'Número de versión a restaurar:')} ").strip()
+                if version:
+                    _cmd_restaurar(version)
+            elif eleccion == "4":
+                _cmd_info()
+            elif eleccion == "5":
+                _cmd_eliminar()
+                # Después de eliminar, salir porque ya no hay proyecto
+                debe_salir = True
+            elif eleccion == "6":
+                debe_salir = True  # Opción "Salir"
+        else:
+            if eleccion == "1":
+                nombre = input(f"  {c(Color.GRAY, 'Nombre del proyecto:')} ").strip()
+                if nombre:
+                    _cmd_crear(nombre, [])
+            elif eleccion == "2":
+                debe_salir = True  # Opción "Salir"
+
+        if debe_salir:
+            print(f"  {c(Color.GRAY, '¡Hasta pronto! 👋')}\n")
+            break
+
+        # Pausa antes de volver al menú
         print()
-        opciones = [
-            ("🚀", "Crear nuevo proyecto"),
-            ("🚪", "Salir"),
-        ]
+        try:
+            input(f"  {c(Color.GRAY, 'Presiona Enter para continuar...')}")
+        except (KeyboardInterrupt, EOFError):
+            print()
+            break
 
-    for i, (ico, label) in enumerate(opciones, 1):
-        print(f"  {c(Color.CYAN, str(i) + '.')} {ico}  {label}")
-
-    print()
-    try:
-        eleccion = input(f"  {c(Color.GRAY, 'Selecciona una opción:')} ").strip()
-    except (KeyboardInterrupt, EOFError):
-        print()
-        return
-
-    print()
-
-    if en_proyecto:
-        if eleccion == "1":
-            _cmd_guardar([])
-        elif eleccion == "2":
-            _cmd_historial()
-        elif eleccion == "3":
-            version = input(f"  {c(Color.GRAY, 'Número de versión a restaurar:')} ").strip()
-            if version:
-                _cmd_restaurar(version)
-        elif eleccion == "4":
-            _cmd_info()
-        elif eleccion == "5":
-            _cmd_eliminar()
-        elif eleccion == "6":
-            pass
-    else:
-        if eleccion == "1":
-            nombre = input(f"  {c(Color.GRAY, 'Nombre del proyecto:')} ").strip()
-            if nombre:
-                _cmd_crear(nombre, [])
-        elif eleccion == "2":
-            pass
+        # Limpiar pantalla (opcional)
+        os.system('clear' if os.name != 'nt' else 'cls')
 
 
 # ─────────────────────────────────────────────
@@ -240,12 +261,12 @@ def _cmd_crear(nombre, args):
     titulo(f"Crear Proyecto: {nombre}")
 
     categorias = [
-        ("💻", "Software",      ["python","javascript","nodejs","react","java","go","php","ruby","flutter","dotnet"]),
-        ("📁", "Documentos",    ["word","excel","powerpoint","pdf","latex"]),
-        ("🖼️ ", "Imágenes",     ["imagenes"]),
-        ("✅", "Tareas",        ["tareas"]),
-        ("🔬", "Investigación", ["investigacion"]),
-        ("🎨", "Diseño",        ["diseno"]),
+        ("💻", "Software",      ["python","javascript","nodejs","react","java","go","php","ruby","flutter","dotnet","general"]),
+        ("📁", "Documentos",    ["word","excel","powerpoint","pdf","latex","general"]),
+        ("🖼️ ", "Imágenes",     ["imagenes","general"]),
+        ("✅", "Tareas",        ["tareas","general"]),
+        ("🔬", "Investigación", ["investigacion","general"]),
+        ("🎨", "Diseño",        ["diseno","general"]),
     ]
 
     print()
