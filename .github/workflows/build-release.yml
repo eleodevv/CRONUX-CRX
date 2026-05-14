@@ -201,7 +201,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install flet pyinstaller
+        run: pip install flet pyinstaller pillow
 
       - name: Build CLI Installer .exe
         run: |
@@ -211,7 +211,6 @@ jobs:
             --name "CRONUX-CLI-INSTALLER" `
             --add-data "cronux_cli/cli;cli" `
             --add-data "cronux_cli/assets;assets" `
-            --icon "cronux_cli/assets/cronux_cli.png" `
             --clean `
             cronux_cli/installer_windows_cli.py
 
@@ -222,7 +221,6 @@ jobs:
             --windowed `
             --name "CRONUX-CRX" `
             --add-data "cronux_cli/assets;assets" `
-            --icon "cronux_cli/assets/cronux_cli.png" `
             --clean `
             cronux_cli/ui/cronux_ui_v2.py
 
