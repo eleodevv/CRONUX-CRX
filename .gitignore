@@ -21,17 +21,16 @@ wheels/
 *.egg
 MANIFEST
 
-# Virtual Environment
-cronux_venv/
+# Virtual environments
 venv/
-ENV/
 env/
+ENV/
+cronux_venv/
 
 # PyInstaller
-*.manifest
 *.spec
 
-# IDE
+# IDEs
 .vscode/
 .idea/
 *.swp
@@ -41,18 +40,28 @@ env/
 # OS
 .DS_Store
 Thumbs.db
+
+# Archivos de la web estática (van en otro repo)
+/demo.css
+/demo.html
+/demo.js
+/descarga.css
+/descarga.html
+/documentacion.css
+/documentacion.html
+/guia-macos.html
+/guia-windows.html
+/guia.css
+/index.css
+/index.html
+/termynal.js
+/img/
+/svg/
+/descargar_cli/
+/descargar_gui/
+/cronuxEstatico/
+*.pdf
+
+# Archivos temporales
 *.log
-
-# Build artifacts
-*.deb
-*.pkg
-*.exe
-*.dmg
-
-# Temporary files
 *.tmp
-*.bak
-*.cache
-
-# Web files (separate repository)
-cronuxEstatico/
