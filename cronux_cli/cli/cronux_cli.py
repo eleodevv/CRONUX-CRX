@@ -384,10 +384,27 @@ def modo_interactivo():
 #  Implementación de comandos
 # ─────────────────────────────────────────────
 def _cmd_crear(nombre, args):
-    """Wizard interactivo para crear proyecto"""
-    print(SPLASH)
-    titulo(f"Crear Proyecto: {nombre}")
-
+    """Wizard interactivo para crear proyecto con navegación por flechas"""
+    import sys
+    import tty
+    import termios
+    
+    def getch():
+        """Lee una tecla sin esperar Enter"""
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(fd)
+            ch = sys.stdin.read(1)
+            if ch == '\x1b':  # Secuencia de escape
+                ch2 = sys.stdin.read(1)
+                if ch2 == '[':
+                    ch3 = sys.stdin.read(1)
+                    return f'\x1b[{ch3}'
+            return ch
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+    
     categorias = [
         ("💻", "Software",      ["python","javascript","nodejs","react","java","go","php","ruby","flutter","dotnet","general"]),
         ("📁", "Documentos",    ["word","excel","powerpoint","pdf","latex","general"]),
@@ -396,39 +413,79 @@ def _cmd_crear(nombre, args):
         ("🔬", "Investigación", ["investigacion","general"]),
         ("🎨", "Diseño",        ["diseno","general"]),
     ]
-
-    print()
-    for i, (ico, label, _) in enumerate(categorias, 1):
-        print(f"  {c(Color.CYAN, str(i) + '.')} {ico}  {label}")
-    print()
-
-    try:
-        cat_input = input(f"  {c(Color.GRAY, 'Categoría [1-6]:')} ").strip()
-        cat_idx = int(cat_input) - 1
-        if not (0 <= cat_idx < len(categorias)):
-            raise ValueError
-    except (ValueError, KeyboardInterrupt):
-        error("Categoría inválida")
-        return
-
-    ico_cat, label_cat, tipos = categorias[cat_idx]
-    print()
-    titulo(f"{ico_cat} {label_cat} — Selecciona el tipo")
-
-    for i, t in enumerate(tipos, 1):
-        print(f"  {c(Color.CYAN, str(i) + '.')} {icono_tipo(t)}  {t}")
-    print()
-
-    try:
-        tipo_input = input(f"  {c(Color.GRAY, f'Tipo [1-{len(tipos)}]:')} ").strip()
-        tipo_idx = int(tipo_input) - 1
-        if not (0 <= tipo_idx < len(tipos)):
-            raise ValueError
-        tipo = tipos[tipo_idx]
-    except (ValueError, KeyboardInterrupt):
-        error("Tipo inválido")
-        return
-
+    
+    # Seleccionar categoría
+    seleccion_cat = 0
+    
+    def mostrar_categorias():
+        print('\033[H', end='')
+        print(SPLASH)
+        titulo(f"Crear Proyecto: {nombre}")
+        print(f"  {c(Color.GRAY, 'Usa ↑/↓ para navegar, Enter para seleccionar, Esc para cancelar')}")
+        print()
+        
+        for i, (ico, label, _) in enumerate(categorias):
+            if i == seleccion_cat:
+                print(f"  {c(Color.CYAN + Color.BOLD, '▶')} {ico}  {c(Color.WHITE + Color.BOLD, label)}")
+            else:
+                print(f"    {c(Color.GRAY, ico)}  {c(Color.GRAY, label)}")
+        print()
+    
+    print('\033[2J', end='')
+    mostrar_categorias()
+    
+    while True:
+        key = getch()
+        if key == '\x1b[A':
+            seleccion_cat = max(0, seleccion_cat - 1)
+            mostrar_categorias()
+        elif key == '\x1b[B':
+            seleccion_cat = min(len(categorias) - 1, seleccion_cat + 1)
+            mostrar_categorias()
+        elif key == '\r' or key == '\n':
+            break
+        elif key == '\x1b' or key == '\x03':
+            print(f"\n  {c(Color.GRAY, 'Operación cancelada')}\n")
+            return
+    
+    ico_cat, label_cat, tipos = categorias[seleccion_cat]
+    
+    # Seleccionar tipo
+    seleccion_tipo = 0
+    
+    def mostrar_tipos():
+        print('\033[H', end='')
+        print(SPLASH)
+        titulo(f"{ico_cat} {label_cat} — Selecciona el tipo")
+        print(f"  {c(Color.GRAY, 'Usa ↑/↓ para navegar, Enter para seleccionar, Esc para cancelar')}")
+        print()
+        
+        for i, t in enumerate(tipos):
+            if i == seleccion_tipo:
+                print(f"  {c(Color.CYAN + Color.BOLD, '▶')} {icono_tipo(t)}  {c(Color.WHITE + Color.BOLD, t)}")
+            else:
+                print(f"    {c(Color.GRAY, icono_tipo(t))}  {c(Color.GRAY, t)}")
+        print()
+    
+    print('\033[2J', end='')
+    mostrar_tipos()
+    
+    while True:
+        key = getch()
+        if key == '\x1b[A':
+            seleccion_tipo = max(0, seleccion_tipo - 1)
+            mostrar_tipos()
+        elif key == '\x1b[B':
+            seleccion_tipo = min(len(tipos) - 1, seleccion_tipo + 1)
+            mostrar_tipos()
+        elif key == '\r' or key == '\n':
+            break
+        elif key == '\x1b' or key == '\x03':
+            print(f"\n  {c(Color.GRAY, 'Operación cancelada')}\n")
+            return
+    
+    tipo = tipos[seleccion_tipo]
+    
     print()
     linea()
     info(f"Creando proyecto {c(Color.BOLD, nombre)} ({icono_tipo(tipo)} {tipo})...")
@@ -968,18 +1025,19 @@ def _cmd_eliminar_version_interactivo():
         if version_dir.exists():
             shutil.rmtree(version_dir)
         
-        # Renumerar versiones posteriores
+        # Renumerar versiones posteriores (decrementar en 1)
         versiones_posteriores = []
         for v_dir in sorted(versiones_dir.glob("version_*")):
             try:
-                num = float(v_dir.name.replace("version_", ""))
-                if num > numero_version:
+                num = int(float(v_dir.name.replace("version_", "")))
+                if num > int(numero_version):
                     versiones_posteriores.append((num, v_dir))
             except:
                 continue
         
-        for num_viejo, v_dir in versiones_posteriores:
-            num_nuevo = num_viejo - 0.1
+        # Renumerar de mayor a menor para evitar conflictos
+        for num_viejo, v_dir in reversed(versiones_posteriores):
+            num_nuevo = num_viejo - 1
             nuevo_nombre = versiones_dir / f"version_{num_nuevo}"
             v_dir.rename(nuevo_nombre)
             
@@ -1064,27 +1122,28 @@ def _cmd_eliminar_version(numero_version_str):
     try:
         shutil.rmtree(version_dir)
         
-        # Renumerar versiones posteriores
+        # Renumerar versiones posteriores (decrementar en 1)
         versiones_posteriores = []
         for v_dir in sorted(versiones_dir.glob("version_*")):
             try:
-                num = float(v_dir.name.replace("version_", ""))
-                if num > numero_version:
+                num = int(float(v_dir.name.replace("version_", "")))
+                if num > int(numero_version):
                     versiones_posteriores.append((num, v_dir))
             except:
                 continue
         
-        for num_viejo, v_dir in versiones_posteriores:
-            num_nuevo = num_viejo - 0.1
+        # Renumerar de mayor a menor para evitar conflictos
+        for num_viejo, v_dir in reversed(versiones_posteriores):
+            num_nuevo = num_viejo - 1
             nuevo_nombre = versiones_dir / f"version_{num_nuevo}"
             v_dir.rename(nuevo_nombre)
             
             # Actualizar metadata
-            meta_file = nuevo_nombre / "metadata.json"
+            meta_file = nuevo_nombre / "metadatos.json"
             if meta_file.exists():
                 with open(meta_file) as f:
                     meta = json.load(f)
-                meta["numero_version"] = num_nuevo
+                meta["version"] = num_nuevo
                 with open(meta_file, "w") as f:
                     json.dump(meta, f, indent=2)
         

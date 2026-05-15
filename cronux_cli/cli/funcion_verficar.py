@@ -20,32 +20,26 @@ def determinar_numero_version():
     carpeta_versiones = obtener_ruta_cronux() / "versiones"
     
     if not carpeta_versiones.exists():
-        return "1.0"
+        return 1
     
     versiones = list(carpeta_versiones.glob("version_*"))
     
     if not versiones:
-        return "1.0"
+        return 1
     
     # Extraer números de versión
     numeros = []
     for version_dir in versiones:
         try:
-            numero = version_dir.name.replace("version_", "")
-            if "." in numero:
-                mayor, menor = numero.split(".")
-                numeros.append((int(mayor), int(menor)))
-            else:
-                numeros.append((int(numero), 0))
-        except ValueError:
+            numero_str = version_dir.name.replace("version_", "")
+            # Convertir a entero (1, 2, 3, etc.)
+            numero = int(float(numero_str))
+            numeros.append(numero)
+        except (ValueError, TypeError):
             continue
     
     if not numeros:
-        return "1.0"
+        return 1
     
-    # Encontrar la versión más alta
-    numeros.sort()
-    ultimo_mayor, ultimo_menor = numeros[-1]
-    
-    # Incrementar versión menor
-    return f"{ultimo_mayor}.{ultimo_menor + 1}"
+    # Retornar el siguiente número
+    return max(numeros) + 1
