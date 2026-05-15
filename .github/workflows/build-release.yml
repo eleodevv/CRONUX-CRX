@@ -127,6 +127,13 @@ jobs:
           echo "✅ Bundle found: $BUNDLE_DIR"
           echo "📦 Bundle contents:"
           ls -lah "$BUNDLE_DIR/"
+          
+          # CRÍTICO: Copiar módulos CLI al bundle después del build
+          echo "📦 Copiando módulos CLI al bundle..."
+          mkdir -p "$BUNDLE_DIR/data/cli"
+          cp cronux_cli/cli/*.py "$BUNDLE_DIR/data/cli/"
+          echo "✅ Módulos CLI copiados:"
+          ls -la "$BUNDLE_DIR/data/cli/"
 
           # Estructura del paquete .deb
           mkdir -p deb-gui/DEBIAN
@@ -142,6 +149,10 @@ jobs:
           # Verificar tamaño del bundle copiado
           echo "📊 Tamaño del bundle:"
           du -sh deb-gui/opt/cronux-crx/
+          
+          # Verificar que los módulos CLI estén en el paquete
+          echo "🔍 Verificando módulos CLI en el paquete:"
+          ls -la deb-gui/opt/cronux-crx/data/cli/ || echo "❌ Carpeta cli no encontrada"
           
           # Buscar el ejecutable principal
           EXEC_PATH=$(find deb-gui/opt/cronux-crx -maxdepth 1 -type f -executable -name "cronux-crx" 2>/dev/null | head -1)

@@ -98,7 +98,7 @@ class CronuxUIv2:
                     
                     return proyecto_actualizado
         return None
-    
+
     def _create_project(self, nombre, ruta, tipo, create_initial_version=True):
         """Crea un nuevo proyecto con loader Git-style timeline"""
         from components.loader import LoaderView

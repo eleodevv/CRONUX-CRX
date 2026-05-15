@@ -7,17 +7,29 @@ import json
 from datetime import datetime
 
 # Agregar el directorio cli al path
-# Primero intentar desde la carpeta local (cuando está empaquetado)
+# Cuando está empaquetado, los módulos están en data/cli/
+# Cuando está en desarrollo, están en ../cli/ o ./cli/
+cli_empaquetado = Path(__file__).parent.parent / "data" / "cli"
 cli_local = Path(__file__).parent / "cli"
 cli_parent = Path(__file__).parent.parent / "cli"
 
-if cli_local.exists():
+if cli_empaquetado.exists():
+    # Empaquetado con Flet
+    sys.path.insert(0, str(cli_empaquetado))
+    print(f"[CLI] Usando módulos empaquetados: {cli_empaquetado}")
+elif cli_local.exists():
+    # Desarrollo con cli/ en la misma carpeta
     sys.path.insert(0, str(cli_local))
+    print(f"[CLI] Usando módulos locales: {cli_local}")
 elif cli_parent.exists():
+    # Desarrollo con cli/ en carpeta padre
     sys.path.insert(0, str(cli_parent))
+    print(f"[CLI] Usando módulos padre: {cli_parent}")
 else:
-    # Fallback: intentar importar directamente
-    pass
+    print(f"[CLI] ⚠️  No se encontraron módulos CLI en:")
+    print(f"  - {cli_empaquetado}")
+    print(f"  - {cli_local}")
+    print(f"  - {cli_parent}")
 
 from crear_proyecto import crear_proyecto_cli
 from guardar_version import guardar_version_cli
