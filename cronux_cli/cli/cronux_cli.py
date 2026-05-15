@@ -226,6 +226,11 @@ def modo_interactivo():
     import tty
     import termios
     
+    # Migrar versiones si es necesario (solo si estamos en un proyecto)
+    if verificarCronux():
+        from funcion_verficar import migrar_versiones_a_enteros
+        migrar_versiones_a_enteros()
+    
     def getch():
         """Lee una tecla sin esperar Enter"""
         fd = sys.stdin.fileno()
@@ -509,6 +514,10 @@ def _cmd_guardar(args):
         error("No estás en un proyecto Cronux")
         info("Usa 'cronux crear <nombre>' para crear uno")
         return
+    
+    # Migrar versiones si es necesario
+    from funcion_verficar import migrar_versiones_a_enteros
+    migrar_versiones_a_enteros()
 
     # Obtener mensaje
     if args:
@@ -1257,6 +1266,14 @@ def main():
 
         elif comando in ["modo", "mode"]:
             cambiar_modo()
+
+        elif comando in ["migrar", "migrate", "fix-versions"]:
+            from funcion_verficar import migrar_versiones_a_enteros
+            if verificarCronux():
+                migrar_versiones_a_enteros()
+                print()
+            else:
+                error("No estás en un proyecto Cronux")
 
         elif comando in ["crear", "iniciar", "new", "init"]:
             if not resto:

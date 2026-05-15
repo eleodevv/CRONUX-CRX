@@ -27,12 +27,12 @@ def determinar_numero_version():
     if not versiones:
         return 1
     
-    # Extraer números de versión
+    # Extraer números de versión y convertir a enteros
     numeros = []
     for version_dir in versiones:
         try:
             numero_str = version_dir.name.replace("version_", "")
-            # Convertir a entero (1, 2, 3, etc.)
+            # Convertir a float primero (por si hay decimales), luego a int
             numero = int(float(numero_str))
             numeros.append(numero)
         except (ValueError, TypeError):
@@ -43,3 +43,92 @@ def determinar_numero_version():
     
     # Retornar el siguiente número
     return max(numeros) + 1
+
+
+def migrar_versiones_a_enteros():
+    """Migra versiones con decimales (1.0, 1.1, 1.2) a enteros (1, 2, 3)"""
+    import shutil
+    import json
+    import tempfile
+    
+    carpeta_versiones = obtener_ruta_cronux() / "versiones"
+    
+    if not carpeta_versiones.exists():
+        return
+    
+    # Obtener todas las versiones y ordenarlas
+    versiones = []
+    for v_dir in sorted(carpeta_versiones.glob("version_*")):
+        try:
+            numero_str = v_dir.name.replace("version_", "")
+            numero = float(numero_str)
+            versiones.append((numero, v_dir))
+        except (ValueError, TypeError):
+            continue
+    
+    if not versiones:
+        return
+    
+    # Verificar si hay versiones con decimales
+    tiene_decimales = any(num != int(num) for num, _ in versiones)
+    
+    if not tiene_decimales:
+        return  # Ya están en formato entero
+    
+    print()
+    print(f"  {c(Color.YELLOW, '⚙')}  Migrando versiones al nuevo formato...")
+    
+    # Ordenar por número
+    versiones.sort(key=lambda x: x[0])
+    
+    # Usar directorio temporal
+    temp_dir = Path(tempfile.mkdtemp())
+    
+    try:
+        # Mover todas a temporal con nuevo número
+        for nuevo_num, (viejo_num, v_dir) in enumerate(versiones, start=1):
+            temp_path = temp_dir / f"version_{nuevo_num}"
+            shutil.move(str(v_dir), str(temp_path))
+            
+            # Actualizar metadata
+            meta_file = temp_path / "metadatos.json"
+            if meta_file.exists():
+                with open(meta_file) as f:
+                    meta = json.load(f)
+                meta["version"] = nuevo_num
+                with open(meta_file, "w") as f:
+                    json.dump(meta, f, indent=2)
+        
+        # Mover de temporal a destino
+        for nuevo_num in range(1, len(versiones) + 1):
+            temp_path = temp_dir / f"version_{nuevo_num}"
+            dest_path = carpeta_versiones / f"version_{nuevo_num}"
+            shutil.move(str(temp_path), str(dest_path))
+        
+        # Actualizar version_actual en proyecto.json
+        proyecto_json = obtener_ruta_cronux() / "proyecto.json"
+        if proyecto_json.exists():
+            with open(proyecto_json) as f:
+                datos = json.load(f)
+            
+            # Convertir version_actual a entero
+            if "version_actual" in datos:
+                try:
+                    version_actual_vieja = float(datos["version_actual"])
+                    # Encontrar el índice de esta versión en la lista ordenada
+                    for nuevo_num, (viejo_num, _) in enumerate(versiones, start=1):
+                        if abs(viejo_num - version_actual_vieja) < 0.01:  # Comparación con tolerancia
+                            datos["version_actual"] = nuevo_num
+                            break
+                except:
+                    datos["version_actual"] = len(versiones)  # Última versión por defecto
+            
+            with open(proyecto_json, "w") as f:
+                json.dump(datos, f, indent=2)
+        
+        print(f"  {c(Color.GREEN, '✓')}  Versiones migradas: {len(versiones)} versiones convertidas")
+        
+    finally:
+        # Limpiar directorio temporal
+        if temp_dir.exists():
+            shutil.rmtree(temp_dir)

@@ -1880,13 +1880,9 @@ class ProjectScreenV2:
             if not proyecto_json.exists():
                 return
             
-            # Leer proyecto actualizado
-            with open(proyecto_json) as f:
-                datos_proyecto = json.load(f)
-            
-            # Obtener versiones actualizadas usando cli_integration
-            from cli_integration import obtener_proyecto_ui
-            proyecto_actualizado = obtener_proyecto_ui(self.proyecto.get("ruta", ""))
+            # Leer proyecto actualizado usando leer_info_proyecto
+            from cli_integration import leer_info_proyecto
+            proyecto_actualizado = leer_info_proyecto(self.proyecto.get("ruta", ""))
             
             if proyecto_actualizado:
                 # Actualizar datos del proyecto
