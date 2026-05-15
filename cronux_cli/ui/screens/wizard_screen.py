@@ -604,12 +604,12 @@ class WizardScreen:
         if e.data == "true":  # Mouse entra
             if not is_selected:
                 e.control.bgcolor = framework["bg"]
-                e.control.border = ft.border.all(2, framework["color"])
+                e.control.border = ft.Border.all(2, framework["color"])
                 e.control.update()
         else:  # Mouse sale
             if not is_selected:
                 e.control.bgcolor = "#FFFFFF"
-                e.control.border = ft.border.all(1, "#E2E8F0")
+                e.control.border = ft.Border.all(1, "#E2E8F0")
                 e.control.update()
     
     def _on_document_type_hover(self, e, doc_type):
@@ -619,12 +619,12 @@ class WizardScreen:
         if e.data == "true":  # Mouse entra
             if not is_selected:
                 e.control.bgcolor = doc_type["bg"]
-                e.control.border = ft.border.all(2, doc_type["color"])
+                e.control.border = ft.Border.all(2, doc_type["color"])
                 e.control.update()
         else:  # Mouse sale
             if not is_selected:
                 e.control.bgcolor = "#FFFFFF"
-                e.control.border = ft.border.all(1, "#E2E8F0")
+                e.control.border = ft.Border.all(1, "#E2E8F0")
                 e.control.update()
     
     def _select_js_framework(self, framework):
@@ -698,12 +698,12 @@ class WizardScreen:
         if e.data == "true":  # Mouse entra
             if not is_selected:
                 e.control.bgcolor = img_type["bg"]
-                e.control.border = ft.border.all(2, img_type["color"])
+                e.control.border = ft.Border.all(2, img_type["color"])
                 e.control.update()
         else:  # Mouse sale
             if not is_selected:
                 e.control.bgcolor = "#FFFFFF"
-                e.control.border = ft.border.all(1, "#E2E8F0")
+                e.control.border = ft.Border.all(1, "#E2E8F0")
                 e.control.update()
     
     def _select_image_type(self, img_type):
@@ -823,14 +823,14 @@ class WizardScreen:
             if e.data == "true":  # Mouse entra
                 if not is_selected:
                     e.control.bgcolor = ft.Colors.with_opacity(0.08, category["color"])
-                    e.control.border = ft.border.all(2, category["color"])
+                    e.control.border = ft.Border.all(2, category["color"])
                     icon_ref.current.color = category["color"]
                     text_ref.current.color = category["color"]
                     e.control.update()
             else:  # Mouse sale
                 if not is_selected:
                     e.control.bgcolor = "#FFFFFF"
-                    e.control.border = ft.border.all(1, "#E2E8F0")
+                    e.control.border = ft.Border.all(1, "#E2E8F0")
                     icon_ref.current.color = "#718096"
                     text_ref.current.color = "#1A202C"
                     e.control.update()
@@ -857,7 +857,7 @@ class WizardScreen:
             padding=ft.padding.all(24),
             border_radius=12,
             bgcolor="#FFFFFF",
-            border=ft.border.all(2 if is_selected else 1, category["color"] if is_selected else "#E2E8F0"),
+            border=ft.Border.all(2 if is_selected else 1, category["color"] if is_selected else "#E2E8F0"),
             on_click=lambda _, c=category: self._select_category(c),
             on_hover=on_hover,
             animate=ft.Animation(150, ft.AnimationCurve.EASE_OUT),
@@ -967,12 +967,12 @@ class WizardScreen:
         if e.data == "true":  # Mouse entra
             if not is_selected:
                 e.control.bgcolor = tech["bg"]
-                e.control.border = ft.border.all(2, tech["color"])
+                e.control.border = ft.Border.all(2, tech["color"])
                 e.control.update()
         else:  # Mouse sale
             if not is_selected:
                 e.control.bgcolor = "#FFFFFF"
-                e.control.border = ft.border.all(1, "#E2E8F0")
+                e.control.border = ft.Border.all(1, "#E2E8F0")
                 e.control.update()
     
     def _select_category(self, category):

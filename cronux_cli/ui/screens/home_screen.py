@@ -52,7 +52,7 @@ class HomeScreen:
                                 ], spacing=0),
                                 padding=ft.Padding.symmetric(horizontal=14, vertical=10),
                                 border_radius=8,
-                                border=ft.border.all(1.5, "#667EEA"),
+                                border=ft.Border.all(1.5, "#667EEA"),
                                 on_click=lambda _: self._sincronizar_proyectos(),
                                 tooltip="Busca proyectos nuevos creados desde CLI",
                                 ink=True,
