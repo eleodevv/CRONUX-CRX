@@ -358,7 +358,7 @@ jobs:
             --clean `
             cronux_cli/installer_windows_cli.py
 
-      - name: Build GUI .exe
+      - name: Build GUI with Flet
         env:
           FLET_CLI_NO_RICH_OUTPUT: "true"
         run: |
@@ -367,6 +367,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path "cronux_cli/ui/cli"
           Copy-Item "cronux_cli/cli/*.py" -Destination "cronux_cli/ui/cli/"
           
+          Write-Host "🔨 Building with Flet..."
           cd cronux_cli/ui
           flet build windows `
             --module-name "cronux_ui_v2" `
@@ -382,25 +383,15 @@ jobs:
             --no-rich-output
           cd ../..
 
-      - name: Find and package executables
+      - name: Package as single executable
         run: |
-          # Buscar el bundle completo de la GUI
-          Write-Host "📂 Buscando bundle de Windows..."
+          Write-Host "📦 Buscando bundle de Flet..."
           $buildDir = "cronux_cli/ui/build/windows"
           
-          if (Test-Path $buildDir) {
-            Write-Host "✅ Build directory found: $buildDir"
-            Get-ChildItem -Path $buildDir -Recurse | Select-Object -First 20 | ForEach-Object { Write-Host $_.FullName }
-          } else {
-            Write-Host "❌ Build directory not found"
-            exit 1
-          }
-          
-          # Buscar la carpeta del bundle (puede ser runner/Release o similar)
+          # Buscar la carpeta del bundle
           $bundleDir = Get-ChildItem -Path $buildDir -Directory -Recurse | Where-Object { $_.Name -eq "Release" } | Select-Object -First 1
           
           if (-not $bundleDir) {
-            Write-Host "⚠️  Release folder not found, searching for any folder with .exe..."
             $exeFile = Get-ChildItem -Path $buildDir -Filter "*.exe" -Recurse | Select-Object -First 1
             if ($exeFile) {
               $bundleDir = $exeFile.Directory
@@ -408,107 +399,39 @@ jobs:
           }
           
           if (-not $bundleDir) {
-            Write-Host "❌ Bundle directory not found"
+            Write-Host "❌ Bundle not found"
             exit 1
           }
           
           Write-Host "✅ Bundle found: $($bundleDir.FullName)"
-          Write-Host "📦 Bundle contents:"
-          Get-ChildItem -Path $bundleDir.FullName | ForEach-Object { Write-Host "  $($_.Name) - $([math]::Round($_.Length/1MB, 2)) MB" }
           
-          # Crear directorio para el instalador
-          New-Item -ItemType Directory -Force -Path "installer-files"
-          Copy-Item -Path "$($bundleDir.FullName)/*" -Destination "installer-files/" -Recurse -Force
+          # Crear un ZIP del bundle completo como alternativa
+          Write-Host "📦 Creando ZIP del bundle..."
+          New-Item -ItemType Directory -Force -Path "dist"
+          Compress-Archive -Path "$($bundleDir.FullName)/*" -DestinationPath "dist/CRONUX-CRX-Bundle.zip" -Force
           
-          # Buscar el ejecutable principal y renombrarlo
-          $mainExe = Get-ChildItem -Path "installer-files" -Filter "*.exe" | Where-Object { $_.Name -notlike "*unins*" } | Select-Object -First 1
+          # Buscar el ejecutable principal
+          $mainExe = Get-ChildItem -Path $bundleDir.FullName -Filter "*.exe" | Where-Object { $_.Name -notlike "*unins*" } | Select-Object -First 1
           
           if ($mainExe) {
             Write-Host "✅ Main executable: $($mainExe.Name)"
-            Rename-Item -Path $mainExe.FullName -NewName "CRONUX-CRX.exe" -Force
+            # Copiar el ejecutable principal a dist
+            Copy-Item $mainExe.FullName -Destination "dist/CRONUX-CRX.exe" -Force
+            
+            $exeSize = (Get-Item "dist/CRONUX-CRX.exe").Length / 1MB
+            $zipSize = (Get-Item "dist/CRONUX-CRX-Bundle.zip").Length / 1MB
+            Write-Host "✅ Executable: $([math]::Round($exeSize, 2)) MB"
+            Write-Host "✅ Bundle ZIP: $([math]::Round($zipSize, 2)) MB"
+          } else {
+            Write-Host "❌ Executable not found"
+            exit 1
           }
           
-          # Copiar icono para el instalador
-          Copy-Item "cronux_cli/assets/cronux_icon.ico" -Destination "installer-files/" -Force
-          
-          # Verificar que el CLI installer exista
+          # Verificar CLI installer
           if (Test-Path "dist/CRONUX-CLI-INSTALLER.exe") {
             Write-Host "✅ CLI installer found"
           } else {
             Write-Host "❌ CLI installer not found"
-            exit 1
-          }
-
-      - name: Create Inno Setup Script
-        run: |
-          $version = "${{ github.ref_name || github.event.inputs.version }}"
-          $version = $version.TrimStart('v')
-          
-          $innoScript = @"
-          #define MyAppName "CRONUX-CRX"
-          #define MyAppVersion "$version"
-          #define MyAppPublisher "CRONUX-CRX"
-          #define MyAppURL "https://github.com/eleodevv/CRONUX-CRX"
-          #define MyAppExeName "CRONUX-CRX.exe"
-
-          [Setup]
-          AppId={{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}
-          AppName={#MyAppName}
-          AppVersion={#MyAppVersion}
-          AppPublisher={#MyAppPublisher}
-          AppPublisherURL={#MyAppURL}
-          AppSupportURL={#MyAppURL}
-          AppUpdatesURL={#MyAppURL}
-          DefaultDirName={autopf}\{#MyAppName}
-          DefaultGroupName={#MyAppName}
-          AllowNoIcons=yes
-          LicenseFile=
-          OutputDir=dist
-          OutputBaseFilename=CRONUX-CRX-Setup
-          SetupIconFile=installer-files\cronux_icon.ico
-          Compression=lzma
-          SolidCompression=yes
-          WizardStyle=modern
-          ArchitecturesInstallIn64BitMode=x64
-
-          [Languages]
-          Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
-
-          [Tasks]
-          Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-
-          [Files]
-          Source: "installer-files\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-
-          [Icons]
-          Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-          Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
-          Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
-
-          [Run]
-          Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
-          "@
-
-          $innoScript | Out-File -FilePath "installer.iss" -Encoding UTF8
-          Write-Host "✅ Inno Setup script created"
-
-      - name: Build Installer with Inno Setup
-        run: |
-          # Descargar e instalar Inno Setup
-          Write-Host "📥 Downloading Inno Setup..."
-          Invoke-WebRequest -Uri "https://jrsoftware.org/download.php/is.exe" -OutFile "innosetup.exe"
-          
-          Write-Host "📦 Installing Inno Setup..."
-          Start-Process -FilePath "innosetup.exe" -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-" -Wait
-          
-          Write-Host "🔨 Building installer..."
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "installer.iss"
-          
-          if (Test-Path "dist/CRONUX-CRX-Setup.exe") {
-            $size = (Get-Item "dist/CRONUX-CRX-Setup.exe").Length / 1MB
-            Write-Host "✅ Installer created: $([math]::Round($size, 2)) MB"
-          } else {
-            Write-Host "❌ Installer not created"
             exit 1
           }
 
@@ -518,7 +441,8 @@ jobs:
           name: windows-packages
           path: |
             dist/CRONUX-CLI-INSTALLER.exe
-            dist/CRONUX-CRX-Setup.exe
+            dist/CRONUX-CRX.exe
+            dist/CRONUX-CRX-Bundle.zip
 
   # ── Release ────────────────────────────────────────────
   release:
@@ -560,9 +484,12 @@ jobs:
             - `Cronux-CRX-CLI-Installer.pkg` — macOS
 
             **GUI (Interfaz gráfica):**
-            - `CRONUX-CRX-Setup.exe` — Windows Installer (recomendado)
+            - `CRONUX-CRX.exe` — Windows (ejecutable principal, requiere extraer el ZIP)
+            - `CRONUX-CRX-Bundle.zip` — Windows (bundle completo con dependencias)
             - `cronux-crx-gui_*_amd64.deb` — Linux (Debian/Ubuntu)
             - `CRONUX-CRX-*.dmg` — macOS
+            
+            **Nota Windows**: Descarga el ZIP, extráelo y ejecuta CRONUX-CRX.exe desde la carpeta extraída.
 
             ### 🗑️ Desinstalar
 
@@ -577,6 +504,7 @@ jobs:
             ```
           files: |
             artifacts/**/*.exe
+            artifacts/**/*.zip
             artifacts/**/*.deb
             artifacts/**/*.pkg
             artifacts/**/*.dmg
