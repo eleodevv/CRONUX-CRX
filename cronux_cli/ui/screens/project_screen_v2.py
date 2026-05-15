@@ -2034,9 +2034,16 @@ class ProjectScreenV2:
                     # Verificar si el proyecto fue eliminado
                     if not cronux_dir.exists():
                         print(f"[WATCHER] Proyecto eliminado, volviendo al home")
-                        # Volver al home
+                        # Detener watcher
                         self._watcher_running = False
-                        self.page.run_task(lambda: self._handle_project_deleted())
+                        
+                        # Volver al home de forma síncrona
+                        try:
+                            self._stop_file_watcher()
+                            self.on_back()
+                        except Exception as e:
+                            print(f"[WATCHER] Error al volver al home: {e}")
+                        
                         break
                     
                     if proyecto_json.exists():
@@ -2084,15 +2091,6 @@ class ProjectScreenV2:
     def _handle_back(self):
         """Maneja el botón de volver, deteniendo el watcher primero"""
         self._stop_file_watcher()
-        self.on_back()
-    
-    def _handle_project_deleted(self):
-        """Maneja cuando el proyecto es eliminado desde el CLI"""
-        self._stop_file_watcher()
-        self._show_error_snackbar("⚠️  Proyecto eliminado desde CLI")
-        # Volver al home después de un momento
-        import time
-        time.sleep(1)
         self.on_back()
     
     def _reload_project(self):
