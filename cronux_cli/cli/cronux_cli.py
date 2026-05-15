@@ -124,6 +124,7 @@ def mostrar_ayuda():
         ("historial",          "Ver historial de versiones"),
         ("restaurar <v>",      "Restaurar una versión"),
         ("eliminar-version <v>", "Eliminar una versión específica"),
+        ("editar-nombre",      "Cambiar el nombre del proyecto"),
         ("info",               "Ver información del proyecto"),
         ("eliminar",           "Eliminar el proyecto"),
         ("ayuda",              "Mostrar esta ayuda"),
@@ -186,6 +187,7 @@ def modo_interactivo():
                 ("📜", "Ver historial"),
                 ("⏮️ ", "Restaurar versión"),
                 ("ℹ️ ", "Ver información"),
+                ("✏️ ", "Editar nombre"),
                 ("🗑️ ", "Eliminar versión"),
                 ("🗑️ ", "Eliminar proyecto"),
                 ("🚪", "Salir"),
@@ -219,18 +221,18 @@ def modo_interactivo():
             elif eleccion == "2":
                 _cmd_historial()
             elif eleccion == "3":
-                version = input(f"  {c(Color.GRAY, 'Número de versión a restaurar:')} ").strip()
-                if version:
-                    _cmd_restaurar(version)
+                _cmd_restaurar_interactivo()
             elif eleccion == "4":
                 _cmd_info()
             elif eleccion == "5":
-                _cmd_eliminar_version_interactivo()
+                _cmd_editar_nombre()
             elif eleccion == "6":
+                _cmd_eliminar_version_interactivo()
+            elif eleccion == "7":
                 _cmd_eliminar()
                 # Después de eliminar, salir porque ya no hay proyecto
                 debe_salir = True
-            elif eleccion == "7":
+            elif eleccion == "8":
                 debe_salir = True  # Opción "Salir"
         else:
             if eleccion == "1":
@@ -412,6 +414,143 @@ def _cmd_historial():
     print()
 
 
+def _cmd_restaurar_interactivo():
+    """Selector interactivo para restaurar una versión"""
+    if not verificarCronux():
+        error("No estás en un proyecto Cronux")
+        return
+    
+    import json
+    
+    cronux_dir = Path.cwd() / ".cronux"
+    versiones_dir = cronux_dir / "versiones"
+    
+    if not versiones_dir.exists():
+        error("No hay versiones guardadas")
+        return
+    
+    # Obtener todas las versiones
+    versiones = []
+    for v_dir in sorted(versiones_dir.glob("version_*")):
+        try:
+            num = float(v_dir.name.replace("version_", ""))
+            meta_file = v_dir / "metadatos.json"
+            if meta_file.exists():
+                with open(meta_file) as f:
+                    meta = json.load(f)
+                versiones.append((num, meta))
+        except:
+            continue
+    
+    if not versiones:
+        error("No hay versiones guardadas")
+        return
+    
+    print()
+    titulo("Selecciona la versión a restaurar")
+    print()
+    
+    # Mostrar lista numerada
+    for i, (num, meta) in enumerate(versiones, 1):
+        descripcion = meta.get("mensaje", "Sin descripción")
+        fecha = meta.get("fecha", "")[:10] if meta.get("fecha") else ""
+        print(f"  {c(Color.CYAN, str(i) + '.')} {c(Color.BOLD, f'v{num}')}  {descripcion}  {c(Color.GRAY, fecha)}")
+    
+    print()
+    
+    try:
+        seleccion_input = input(f"  {c(Color.GRAY, f'Selecciona [1-{len(versiones)}] o Enter para cancelar:')} ").strip()
+        if not seleccion_input:
+            info("Operación cancelada")
+            return
+        
+        seleccion = int(seleccion_input) - 1
+        if not (0 <= seleccion < len(versiones)):
+            error("Selección inválida")
+            return
+    except (ValueError, KeyboardInterrupt, EOFError):
+        print()
+        info("Operación cancelada")
+        return
+    
+    # Versión seleccionada
+    numero_version, meta = versiones[seleccion]
+    
+    print()
+    warn(f"Restaurar versión {c(Color.BOLD, f'v{numero_version}')} reemplazará los archivos actuales")
+    print()
+    
+    try:
+        confirmar = input(f"  {c(Color.GRAY, '¿Confirmar? (s/n):')} ").strip().lower()
+    except (KeyboardInterrupt, EOFError):
+        print()
+        return
+    
+    if confirmar != 's':
+        info("Operación cancelada")
+        return
+    
+    print()
+    info("Restaurando versión...")
+    print()
+    
+    def progreso(msg):
+        print(f"  {c(Color.GRAY, '→')} {msg}")
+    
+    exito = restaurar_version_cli(str(numero_version), auto_instalar=True, callback_progreso=progreso)
+    
+    print()
+    if exito:
+        ok(f"Versión {c(Color.CYAN, f'v{numero_version}')} restaurada exitosamente")
+    else:
+        error("No se pudo restaurar la versión")
+    print()
+
+
+def _cmd_editar_nombre():
+    """Editar el nombre del proyecto"""
+    if not verificarCronux():
+        error("No estás en un proyecto Cronux")
+        return
+    
+    import json
+    
+    cronux_dir = Path.cwd() / ".cronux"
+    proyecto_json = cronux_dir / "proyecto.json"
+    
+    if not proyecto_json.exists():
+        error("No se encontró el archivo proyecto.json")
+        return
+    
+    try:
+        with open(proyecto_json) as f:
+            datos = json.load(f)
+        
+        nombre_actual = datos.get("nombre", "Sin nombre")
+        
+        print()
+        titulo("Editar nombre del proyecto")
+        print(f"  {c(Color.GRAY, 'Nombre actual:')} {c(Color.CYAN, nombre_actual)}")
+        print()
+        
+        nuevo_nombre = input(f"  {c(Color.GRAY, 'Nuevo nombre (Enter para cancelar):')} ").strip()
+        
+        if not nuevo_nombre:
+            info("Operación cancelada")
+            return
+        
+        datos["nombre"] = nuevo_nombre
+        
+        with open(proyecto_json, "w") as f:
+            json.dump(datos, f, indent=2)
+        
+        print()
+        ok(f"Nombre actualizado: {c(Color.CYAN, nuevo_nombre)}")
+    except Exception as e:
+        error(f"Error al editar nombre: {e}")
+    print()
+
+
 def _cmd_restaurar(version):
     if not verificarCronux():
         error("No estás en un proyecto Cronux")
@@ -518,7 +657,7 @@ def _cmd_eliminar_version_interactivo():
         try:
             num = float(v_dir.name.replace("version_", ""))
             if num > 1:  # Excluir versión 1
-                meta_file = v_dir / "metadata.json"
+                meta_file = v_dir / "metadatos.json"
                 if meta_file.exists():
                     with open(meta_file) as f:
                         meta = json.load(f)
@@ -532,61 +671,30 @@ def _cmd_eliminar_version_interactivo():
     
     print()
     titulo("Selecciona la versión a eliminar")
-    print(f"  {c(Color.GRAY, 'Usa ↑/↓ para navegar, Enter para seleccionar, Esc para cancelar')}")
     print()
     
-    # Selector interactivo
-    seleccion = 0
+    # Mostrar lista numerada
+    for i, (num, meta) in enumerate(versiones, 1):
+        descripcion = meta.get("mensaje", "Sin descripción")
+        fecha = meta.get("fecha", "")[:10] if meta.get("fecha") else ""
+        print(f"  {c(Color.CYAN, str(i) + '.')} {c(Color.BOLD, f'v{num}')}  {descripcion}  {c(Color.GRAY, fecha)}")
     
-    import termios
-    import tty
+    print()
     
-    def getch():
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
-        try:
-            tty.setraw(fd)
-            ch = sys.stdin.read(1)
-            if ch == '\x1b':  # Secuencia de escape
-                ch2 = sys.stdin.read(1)
-                if ch2 == '[':
-                    ch3 = sys.stdin.read(1)
-                    return f'\x1b[{ch3}'
-            return ch
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-    
-    while True:
-        # Limpiar y mostrar opciones
-        print('\033[2J\033[H', end='')  # Limpiar pantalla
-        print(SPLASH)
-        titulo("Selecciona la versión a eliminar")
-        print(f"  {c(Color.GRAY, 'Usa ↑/↓ para navegar, Enter para seleccionar, Esc para cancelar')}")
-        print()
-        
-        for i, (num, meta) in enumerate(versiones):
-            descripcion = meta.get("descripcion", "Sin descripción")
-            fecha = meta.get("fecha", "")[:10] if meta.get("fecha") else ""
-            
-            if i == seleccion:
-                print(f"  {c(Color.CYAN, '▶')} {c(Color.BOLD + Color.CYAN, f'v{num}')}  {descripcion}  {c(Color.GRAY, fecha)}")
-            else:
-                print(f"    {c(Color.GRAY, f'v{num}')}  {c(Color.GRAY, descripcion)}  {c(Color.DIM, fecha)}")
-        
-        print()
-        
-        # Leer tecla
-        key = getch()
-        
-        if key == '\x1b[A':  # Flecha arriba
-            seleccion = max(0, seleccion - 1)
-        elif key == '\x1b[B':  # Flecha abajo
-            seleccion = min(len(versiones) - 1, seleccion + 1)
-        elif key == '\r' or key == '\n':  # Enter
-            break
-        elif key == '\x1b' or key == '\x03':  # Esc o Ctrl+C
-            print(f"  {c(Color.GRAY, 'Operación cancelada')}\n")
+    try:
+        seleccion_input = input(f"  {c(Color.GRAY, f'Selecciona [1-{len(versiones)}] o Enter para cancelar:')} ").strip()
+        if not seleccion_input:
+            info("Operación cancelada")
             return
+        
+        seleccion = int(seleccion_input) - 1
+        if not (0 <= seleccion < len(versiones)):
+            error("Selección inválida")
+            return
+    except (ValueError, KeyboardInterrupt, EOFError):
+        print()
+        info("Operación cancelada")
+        return
     
     # Versión seleccionada
     numero_version, meta = versiones[seleccion]
@@ -628,11 +736,11 @@ def _cmd_eliminar_version_interactivo():
             v_dir.rename(nuevo_nombre)
             
             # Actualizar metadata
-            meta_file = nuevo_nombre / "metadata.json"
+            meta_file = nuevo_nombre / "metadatos.json"
             if meta_file.exists():
                 with open(meta_file) as f:
                     meta = json.load(f)
-                meta["numero_version"] = num_nuevo
+                meta["version"] = num_nuevo
                 with open(meta_file, "w") as f:
                     json.dump(meta, f, indent=2)
         
@@ -808,6 +916,9 @@ def main():
                 info("Uso: cronux eliminar-version v1.2")
                 sys.exit(1)
             _cmd_eliminar_version(resto[0])
+
+        elif comando in ["editar-nombre", "renombrar", "rename"]:
+            _cmd_editar_nombre()
 
         elif comando in ["info", "estado", "status"]:
             _cmd_info()

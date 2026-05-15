@@ -171,6 +171,18 @@ def guardar_version_cli(mensaje, callback_progreso=None):
     with open(archivo_metadatos, "w") as f:
         json.dump(metadatos, f, indent=2)
 
+    # Actualizar versión actual en proyecto.json
+    try:
+        proyecto_json = obtener_ruta_cronux() / "proyecto.json"
+        if proyecto_json.exists():
+            with open(proyecto_json, "r") as f:
+                datos_proyecto = json.load(f)
+            datos_proyecto["version_actual"] = numero_version
+            with open(proyecto_json, "w") as f:
+                json.dump(datos_proyecto, f, indent=2)
+    except Exception as e:
+        print(f"Advertencia: No se pudo actualizar version_actual: {e}")
+
     print(f"\n  ✓  Versión {numero_version} guardada")
     print(f"  ●  Mensaje:  {metadatos['mensaje']}")
     print(f"  ●  Archivos: {archivos_copiados}  |  Tamaño: {tamaño_formateado}\n")
