@@ -1,0 +1,3 @@
+[tool.flet]
+# Incluir módulos adicionales en el build
+include-packages = ["cli", "screens", "components"]
