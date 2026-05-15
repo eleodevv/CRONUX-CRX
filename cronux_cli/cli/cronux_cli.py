@@ -225,9 +225,7 @@ def modo_interactivo():
             elif eleccion == "4":
                 _cmd_info()
             elif eleccion == "5":
-                version = input(f"  {c(Color.GRAY, 'Número de versión a eliminar:')} ").strip()
-                if version:
-                    _cmd_eliminar_version(version)
+                _cmd_eliminar_version_interactivo()
             elif eleccion == "6":
                 _cmd_eliminar()
                 # Después de eliminar, salir porque ya no hay proyecto
@@ -498,19 +496,162 @@ def _cmd_info():
     print()
 
 
-def _cmd_eliminar_version(numero_version_str):
-    """Elimina una versión específica y reorganiza las demás"""
+def _cmd_eliminar_version_interactivo():
+    """Selector interactivo para eliminar una versión"""
     if not verificarCronux():
         error("No estás en un proyecto Cronux")
         return
     
-    # Importar la función de cli_integration
-    sys.path.insert(0, str(Path(__file__).parent.parent / "ui"))
-    try:
-        from cli_integration import eliminar_version_ui
-    except ImportError:
-        error("No se pudo importar la función eliminar_version_ui")
+    import json
+    import shutil
+    
+    cronux_dir = Path.cwd() / ".cronux"
+    versiones_dir = cronux_dir / "versiones"
+    
+    if not versiones_dir.exists():
+        error("No hay versiones guardadas")
         return
+    
+    # Obtener todas las versiones excepto la 1
+    versiones = []
+    for v_dir in sorted(versiones_dir.glob("version_*")):
+        try:
+            num = float(v_dir.name.replace("version_", ""))
+            if num > 1:  # Excluir versión 1
+                meta_file = v_dir / "metadata.json"
+                if meta_file.exists():
+                    with open(meta_file) as f:
+                        meta = json.load(f)
+                    versiones.append((num, meta))
+        except:
+            continue
+    
+    if not versiones:
+        error("No hay versiones disponibles para eliminar (la v1 no se puede eliminar)")
+        return
+    
+    print()
+    titulo("Selecciona la versión a eliminar")
+    print(f"  {c(Color.GRAY, 'Usa ↑/↓ para navegar, Enter para seleccionar, Esc para cancelar')}")
+    print()
+    
+    # Selector interactivo
+    seleccion = 0
+    
+    import termios
+    import tty
+    
+    def getch():
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(fd)
+            ch = sys.stdin.read(1)
+            if ch == '\x1b':  # Secuencia de escape
+                ch2 = sys.stdin.read(1)
+                if ch2 == '[':
+                    ch3 = sys.stdin.read(1)
+                    return f'\x1b[{ch3}'
+            return ch
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+    
+    while True:
+        # Limpiar y mostrar opciones
+        print('\033[2J\033[H', end='')  # Limpiar pantalla
+        print(SPLASH)
+        titulo("Selecciona la versión a eliminar")
+        print(f"  {c(Color.GRAY, 'Usa ↑/↓ para navegar, Enter para seleccionar, Esc para cancelar')}")
+        print()
+        
+        for i, (num, meta) in enumerate(versiones):
+            descripcion = meta.get("descripcion", "Sin descripción")
+            fecha = meta.get("fecha", "")[:10] if meta.get("fecha") else ""
+            
+            if i == seleccion:
+                print(f"  {c(Color.CYAN, '▶')} {c(Color.BOLD + Color.CYAN, f'v{num}')}  {descripcion}  {c(Color.GRAY, fecha)}")
+            else:
+                print(f"    {c(Color.GRAY, f'v{num}')}  {c(Color.GRAY, descripcion)}  {c(Color.DIM, fecha)}")
+        
+        print()
+        
+        # Leer tecla
+        key = getch()
+        
+        if key == '\x1b[A':  # Flecha arriba
+            seleccion = max(0, seleccion - 1)
+        elif key == '\x1b[B':  # Flecha abajo
+            seleccion = min(len(versiones) - 1, seleccion + 1)
+        elif key == '\r' or key == '\n':  # Enter
+            break
+        elif key == '\x1b' or key == '\x03':  # Esc o Ctrl+C
+            print(f"  {c(Color.GRAY, 'Operación cancelada')}\n")
+            return
+    
+    # Versión seleccionada
+    numero_version, meta = versiones[seleccion]
+    
+    print()
+    warn(f"Esto eliminará la versión {c(Color.BOLD, f'v{numero_version}')}")
+    warn("Las versiones posteriores se renumerarán automáticamente")
+    print()
+    
+    try:
+        confirmar = input(f"  {c(Color.GRAY, '¿Continuar? (s/n):')} ").strip().lower()
+    except (KeyboardInterrupt, EOFError):
+        print()
+        return
+    
+    if confirmar != 's':
+        info("Operación cancelada")
+        return
+    
+    # Eliminar versión
+    try:
+        version_dir = versiones_dir / f"version_{numero_version}"
+        if version_dir.exists():
+            shutil.rmtree(version_dir)
+        
+        # Renumerar versiones posteriores
+        versiones_posteriores = []
+        for v_dir in sorted(versiones_dir.glob("version_*")):
+            try:
+                num = float(v_dir.name.replace("version_", ""))
+                if num > numero_version:
+                    versiones_posteriores.append((num, v_dir))
+            except:
+                continue
+        
+        for num_viejo, v_dir in versiones_posteriores:
+            num_nuevo = num_viejo - 0.1
+            nuevo_nombre = versiones_dir / f"version_{num_nuevo}"
+            v_dir.rename(nuevo_nombre)
+            
+            # Actualizar metadata
+            meta_file = nuevo_nombre / "metadata.json"
+            if meta_file.exists():
+                with open(meta_file) as f:
+                    meta = json.load(f)
+                meta["numero_version"] = num_nuevo
+                with open(meta_file, "w") as f:
+                    json.dump(meta, f, indent=2)
+        
+        print()
+        ok(f"Versión {c(Color.BOLD, f'v{numero_version}')} eliminada")
+        info("Las versiones posteriores han sido renumeradas")
+    except Exception as e:
+        error(f"Error al eliminar versión: {e}")
+    print()
+
+
+def _cmd_eliminar_version(numero_version_str):
+    """Elimina una versión específica (para uso desde línea de comandos)"""
+    if not verificarCronux():
+        error("No estás en un proyecto Cronux")
+        return
+    
+    import json
+    import shutil
     
     try:
         numero_version = float(numero_version_str.replace("v", "").replace("V", ""))
@@ -521,6 +662,14 @@ def _cmd_eliminar_version(numero_version_str):
     # Proteger versión 1
     if numero_version == 1:
         error("No se puede eliminar la versión 1 (versión original)")
+        return
+    
+    cronux_dir = Path.cwd() / ".cronux"
+    versiones_dir = cronux_dir / "versiones"
+    version_dir = versiones_dir / f"version_{numero_version}"
+    
+    if not version_dir.exists():
+        error(f"La versión v{numero_version} no existe")
         return
     
     print()
@@ -539,15 +688,38 @@ def _cmd_eliminar_version(numero_version_str):
         return
     
     try:
-        resultado = eliminar_version_ui(str(Path.cwd()), numero_version)
-        if resultado:
-            print()
-            ok(f"Versión {c(Color.BOLD, f'v{numero_version}')} eliminada")
-            info("Las versiones posteriores han sido renumeradas")
-        else:
-            error("No se pudo eliminar la versión")
+        shutil.rmtree(version_dir)
+        
+        # Renumerar versiones posteriores
+        versiones_posteriores = []
+        for v_dir in sorted(versiones_dir.glob("version_*")):
+            try:
+                num = float(v_dir.name.replace("version_", ""))
+                if num > numero_version:
+                    versiones_posteriores.append((num, v_dir))
+            except:
+                continue
+        
+        for num_viejo, v_dir in versiones_posteriores:
+            num_nuevo = num_viejo - 0.1
+            nuevo_nombre = versiones_dir / f"version_{num_nuevo}"
+            v_dir.rename(nuevo_nombre)
+            
+            # Actualizar metadata
+            meta_file = nuevo_nombre / "metadata.json"
+            if meta_file.exists():
+                with open(meta_file) as f:
+                    meta = json.load(f)
+                meta["numero_version"] = num_nuevo
+                with open(meta_file, "w") as f:
+                    json.dump(meta, f, indent=2)
+        
+        print()
+        ok(f"Versión {c(Color.BOLD, f'v{numero_version}')} eliminada")
+        info("Las versiones posteriores han sido renumeradas")
     except Exception as e:
         error(f"Error al eliminar versión: {e}")
+    print()
     print()
 
 
