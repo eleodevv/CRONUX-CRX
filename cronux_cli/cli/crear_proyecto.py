@@ -133,6 +133,41 @@ def crear_proyecto_cli(nombre_proyecto, tipo_proyecto="general", callback_progre
     if callback_progreso:
         callback_progreso("Proyecto creado exitosamente")
     
+    # Agregar proyecto a la lista de la UI
+    try:
+        from pathlib import Path as PathLib
+        import json as json_lib
+        
+        config_dir = PathLib.home() / ".cronux-ui"
+        config_file = config_dir / "proyectos.json"
+        
+        # Crear directorio si no existe
+        config_dir.mkdir(exist_ok=True)
+        
+        # Leer lista actual
+        proyectos = []
+        if config_file.exists():
+            try:
+                with open(config_file, "r") as f:
+                    data = json_lib.load(f)
+                proyectos = data.get("proyectos", [])
+            except:
+                proyectos = []
+        
+        # Agregar ruta del proyecto actual si no está
+        ruta_actual = str(Path.cwd())
+        if ruta_actual not in proyectos:
+            proyectos.append(ruta_actual)
+            
+            # Guardar lista actualizada
+            with open(config_file, "w") as f:
+                json_lib.dump({"proyectos": proyectos}, f, indent=2)
+            
+            print(f"[CLI] Proyecto agregado a la lista de la UI")
+    except Exception as e:
+        # No es crítico si falla
+        print(f"[CLI] Advertencia: No se pudo agregar a la lista de la UI: {e}")
+    
     print(f"\n  ✓  Proyecto inicializado")
     print(f"  ●  Nombre:   {nombre_proyecto}")
     print(f"  ●  Tipo:     {tipo_proyecto}")
