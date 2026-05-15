@@ -854,7 +854,7 @@ class WizardScreen:
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
             width=200,
             height=140,
-            padding=ft.padding.all(24),
+            padding=ft.Padding.all(24),
             border_radius=12,
             bgcolor="#FFFFFF",
             border=ft.Border.all(2 if is_selected else 1, category["color"] if is_selected else "#E2E8F0"),

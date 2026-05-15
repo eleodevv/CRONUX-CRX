@@ -264,8 +264,11 @@ def main(page: ft.Page):
     script_dir = Path(__file__).parent
     page.assets_dir = str(script_dir / "assets")
     
+    # IMPORTANTE: Configurar para que los updates sean inmediatos
+    page.auto_scroll = False
+    
     CronuxUIv2(page)
  
 
 if __name__ == "__main__":
-    ft.app(main)
+    ft.run(main)

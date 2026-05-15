@@ -5,36 +5,50 @@ import sys
 from pathlib import Path
 import json
 from datetime import datetime
+import os
 
 # Agregar el directorio cli al path
-# Cuando está empaquetado, los módulos están en data/cli/
-# Cuando está en desarrollo, están en ../cli/ o ./cli/
-cli_empaquetado = Path(__file__).parent.parent / "data" / "cli"
-cli_local = Path(__file__).parent / "cli"
+# Cuando Flet desempaqueta la app, todo está en el mismo nivel
+# Buscar en múltiples ubicaciones posibles
+
+# 1. Mismo directorio que este archivo (cuando está desempaquetado por Flet)
+cli_mismo_dir = Path(__file__).parent / "cli"
+
+# 2. Carpeta data/cli (cuando está en el bundle de Flet)
+cli_data = Path(__file__).parent.parent / "data" / "cli"
+
+# 3. Desarrollo - carpeta padre
 cli_parent = Path(__file__).parent.parent / "cli"
 
-if cli_empaquetado.exists():
-    # Empaquetado con Flet
-    sys.path.insert(0, str(cli_empaquetado))
-    print(f"[CLI] Usando módulos empaquetados: {cli_empaquetado}")
-elif cli_local.exists():
-    # Desarrollo con cli/ en la misma carpeta
-    sys.path.insert(0, str(cli_local))
-    print(f"[CLI] Usando módulos locales: {cli_local}")
+print(f"[CLI] Buscando módulos CLI...")
+print(f"[CLI] __file__ = {__file__}")
+print(f"[CLI] parent = {Path(__file__).parent}")
+
+if cli_mismo_dir.exists():
+    sys.path.insert(0, str(cli_mismo_dir))
+    print(f"[CLI] ✓ Usando módulos en: {cli_mismo_dir}")
+elif cli_data.exists():
+    sys.path.insert(0, str(cli_data))
+    print(f"[CLI] ✓ Usando módulos en: {cli_data}")
 elif cli_parent.exists():
-    # Desarrollo con cli/ en carpeta padre
     sys.path.insert(0, str(cli_parent))
-    print(f"[CLI] Usando módulos padre: {cli_parent}")
+    print(f"[CLI] ✓ Usando módulos en: {cli_parent}")
 else:
     print(f"[CLI] ⚠️  No se encontraron módulos CLI en:")
-    print(f"  - {cli_empaquetado}")
-    print(f"  - {cli_local}")
-    print(f"  - {cli_parent}")
+    print(f"  - {cli_mismo_dir} (existe: {cli_mismo_dir.exists()})")
+    print(f"  - {cli_data} (existe: {cli_data.exists()})")
+    print(f"  - {cli_parent} (existe: {cli_parent.exists()})")
 
-from crear_proyecto import crear_proyecto_cli
-from guardar_version import guardar_version_cli
-from restaurar_versiones import restaurar_version_cli
-from funcion_verficar import verificarCronux, obtener_ruta_cronux
+try:
+    from crear_proyecto import crear_proyecto_cli
+    from guardar_version import guardar_version_cli
+    from restaurar_versiones import restaurar_version_cli
+    from funcion_verficar import verificarCronux, obtener_ruta_cronux
+    print("[CLI] ✓ Módulos CLI importados correctamente")
+except ImportError as e:
+    print(f"[CLI] ❌ Error importando módulos CLI: {e}")
+    import traceback
+    traceback.print_exc()
 
 
 # Archivo de configuración para guardar proyectos
@@ -381,12 +395,13 @@ def leer_info_proyecto(ruta_proyecto):
     ruta = Path(ruta_proyecto)
     carpeta_cronux = ruta / ".cronux"
     
-    if not carpeta_cronux.exists():
+    # Validación estricta: debe existir la carpeta .cronux Y el archivo proyecto.json
+    if not carpeta_cronux.exists() or not carpeta_cronux.is_dir():
         return None
     
     # Leer datos del proyecto
     archivo_proyecto = carpeta_cronux / "proyecto.json"
-    if not archivo_proyecto.exists():
+    if not archivo_proyecto.exists() or not archivo_proyecto.is_file():
         return None
     
     try:
@@ -628,6 +643,12 @@ def buscar_proyectos_en_directorio(directorio_base, max_depth=3):
                     # Si encontramos una carpeta .cronux, el padre es un proyecto
                     if item.name == '.cronux':
                         proyecto_dir = item.parent
+                        # Validar que sea un proyecto válido (debe tener proyecto.json)
+                        archivo_proyecto = item / "proyecto.json"
+                        if not archivo_proyecto.exists():
+                            print(f"      Carpeta .cronux sin proyecto.json - ignorando")
+                            continue
+                        
                         print(f"    ¡Encontrado! {proyecto_dir}")
                         proyecto_info = leer_info_proyecto(str(proyecto_dir))
                         if proyecto_info:

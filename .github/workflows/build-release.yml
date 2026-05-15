@@ -105,6 +105,7 @@ jobs:
             --bundle-id "dev.cronux.crx" \
             --description "Sistema de Control de Versiones Local" \
             --copyright "Copyright © 2024 CRONUX-CRX" \
+            --icon "../assets/cronux_icon_256.png" \
             --yes \
             --no-rich-output
           
@@ -286,6 +287,7 @@ jobs:
             --bundle-id "dev.cronux.crx" \
             --description "Sistema de Control de Versiones Local" \
             --copyright "Copyright © 2024 CRONUX-CRX" \
+            --icon "../assets/cronux_cli.icns" \
             --yes \
             --no-rich-output
           cd ../..
