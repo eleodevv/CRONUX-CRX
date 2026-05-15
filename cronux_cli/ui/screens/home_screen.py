@@ -628,91 +628,62 @@ class HomeScreen:
             else:
                 self._show_error_snackbar("❌ Error al actualizar nombre")
         
+        # Modal minimalista estilo Vercel - compacto
         dialog = ft.AlertDialog(
             modal=True,
             content=ft.Container(
                 content=ft.Column([
-                    # Icono
-                    ft.Container(
-                        content=ft.Icon(ft.Icons.EDIT_ROUNDED, size=48, color="#FFFFFF"),
-                        width=80,
-                        height=80,
-                        border_radius=40,
-                        bgcolor="#F59E0B",
-                        alignment=ft.alignment.Alignment(0, 0),
-                    ),
-                    
-                    ft.Container(height=20),
-                    
+                    # Título minimalista
                     ft.Text(
                         "Editar nombre del proyecto",
-                        size=22,
-                        weight=ft.FontWeight.BOLD,
-                        color="#1A202C",
-                        text_align=ft.TextAlign.CENTER,
+                        size=15,
+                        weight=ft.FontWeight.W_600,
+                        color="#171717",
                     ),
                     
-                    ft.Container(height=8),
+                    ft.Container(height=16),
                     
-                    ft.Text(
-                        "Nombre del proyecto",
-                        size=13,
-                        color="#718096",
-                        text_align=ft.TextAlign.LEFT,
-                    ),
-                    
-                    ft.Container(height=8),
-                    
+                    # Campo de texto minimalista
                     nombre_field,
                     
-                    ft.Container(height=24),
+                    ft.Container(height=16),
                     
-                    # Botones
+                    # Línea separadora
+                    ft.Container(
+                        height=1,
+                        bgcolor="#E5E5E5",
+                    ),
+                    
+                    ft.Container(height=12),
+                    
+                    # Botones minimalistas
                     ft.Row([
-                        ft.Container(
-                            content=ft.TextButton(
-                                content=ft.Container(
-                                    content=ft.Text("Cancelar", size=15, weight=ft.FontWeight.W_600, color="#718096"),
-                                    padding=ft.Padding.all(14),
-                                    alignment=ft.alignment.Alignment(0, 0),
-                                ),
-                                on_click=lambda _: self._close_dialog(dialog),
-                            ),
-                            expand=1,
-                            border_radius=10,
-                            bgcolor="#F7FAFC",
-                            border=ft.Border.all(2, "#E2E8F0"),
+                        ft.TextButton(
+                            content=ft.Text("Cancelar", size=13, weight=ft.FontWeight.W_500, color="#737373"),
+                            on_click=lambda _: self._close_dialog(dialog),
                         ),
                         
-                        ft.Container(width=10),
+                        ft.Container(expand=True),
                         
-                        ft.Container(
-                            content=ft.ElevatedButton(
-                                content=ft.Container(
-                                    content=ft.Row([
-                                        ft.Icon(ft.Icons.CHECK_CIRCLE, size=18, color="#FFFFFF"),
-                                        ft.Container(width=8),
-                                        ft.Text("Guardar", size=15, weight=ft.FontWeight.BOLD, color="#FFFFFF"),
-                                    ], alignment=ft.MainAxisAlignment.CENTER),
-                                    padding=ft.Padding.all(14),
-                                ),
-                                on_click=lambda _: guardar_nombre(),
-                                style=ft.ButtonStyle(
-                                    bgcolor="#F59E0B",
-                                    elevation=0,
-                                    shape=ft.RoundedRectangleBorder(radius=10),
-                                ),
+                        ft.ElevatedButton(
+                            content=ft.Text("Guardar", size=13, weight=ft.FontWeight.W_500, color="#FFFFFF"),
+                            on_click=lambda _: guardar_nombre(),
+                            style=ft.ButtonStyle(
+                                bgcolor="#171717",
+                                color="#FFFFFF",
+                                padding=ft.Padding.symmetric(horizontal=20, vertical=10),
+                                shape=ft.RoundedRectangleBorder(radius=6),
                             ),
-                            expand=2,
                         ),
-                    ]),
+                    ], alignment=ft.MainAxisAlignment.END),
                     
-                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                padding=ft.Padding.all(28),
-                width=480,
-                border_radius=20,
+                ], horizontal_alignment=ft.CrossAxisAlignment.START, spacing=0),
+                padding=ft.Padding.all(20),
+                width=380,
                 bgcolor="#FFFFFF",
             ),
+            shape=ft.RoundedRectangleBorder(radius=8),
+            bgcolor="#FFFFFF",
         )
         
         self.page.overlay.append(dialog)

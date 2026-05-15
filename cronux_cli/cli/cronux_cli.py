@@ -123,6 +123,7 @@ def mostrar_ayuda():
         ("guardar <mensaje>",  "Guardar versión actual"),
         ("historial",          "Ver historial de versiones"),
         ("restaurar <v>",      "Restaurar una versión"),
+        ("eliminar-version <v>", "Eliminar una versión específica"),
         ("info",               "Ver información del proyecto"),
         ("eliminar",           "Eliminar el proyecto"),
         ("ayuda",              "Mostrar esta ayuda"),
@@ -492,6 +493,59 @@ def _cmd_info():
     print()
 
 
+def _cmd_eliminar_version(numero_version_str):
+    """Elimina una versión específica y reorganiza las demás"""
+    if not verificarCronux():
+        error("No estás en un proyecto Cronux")
+        return
+    
+    # Importar la función de cli_integration
+    sys.path.insert(0, str(Path(__file__).parent.parent / "ui"))
+    try:
+        from cli_integration import eliminar_version_ui
+    except ImportError:
+        error("No se pudo importar la función eliminar_version_ui")
+        return
+    
+    try:
+        numero_version = float(numero_version_str.replace("v", "").replace("V", ""))
+    except ValueError:
+        error(f"Versión inválida: {numero_version_str}")
+        return
+    
+    # Proteger versión 1
+    if numero_version == 1:
+        error("No se puede eliminar la versión 1 (versión original)")
+        return
+    
+    print()
+    warn(f"Esto eliminará la versión {c(Color.BOLD, f'v{numero_version}')}")
+    warn("Las versiones posteriores se renumerarán automáticamente")
+    print()
+    
+    try:
+        confirmar = input(f"  {c(Color.GRAY, '¿Continuar? (s/n):')} ").strip().lower()
+    except (KeyboardInterrupt, EOFError):
+        print()
+        return
+    
+    if confirmar != 's':
+        info("Operación cancelada")
+        return
+    
+    try:
+        resultado = eliminar_version_ui(str(Path.cwd()), numero_version)
+        if resultado:
+            print()
+            ok(f"Versión {c(Color.BOLD, f'v{numero_version}')} eliminada")
+            info("Las versiones posteriores han sido renumeradas")
+        else:
+            error("No se pudo eliminar la versión")
+    except Exception as e:
+        error(f"Error al eliminar versión: {e}")
+    print()
+
+
 def _cmd_eliminar():
     if not verificarCronux():
         error("No estás en un proyecto Cronux")
@@ -570,6 +624,13 @@ def main():
                 info("Uso: cronux restaurar v1.2")
                 sys.exit(1)
             _cmd_restaurar(resto[0])
+
+        elif comando in ["eliminar-version", "borrar-version", "delete-version"]:
+            if not resto:
+                error("Se requiere el número de versión")
+                info("Uso: cronux eliminar-version v1.2")
+                sys.exit(1)
+            _cmd_eliminar_version(resto[0])
 
         elif comando in ["info", "estado", "status"]:
             _cmd_info()

@@ -12,6 +12,26 @@ COMANDOS_INSTALACION = {
         "archivos_requeridos": ["package.json"],
         "descripcion": "Instalando dependencias de Node.js..."
     },
+    "react": {
+        "comando": "npm install --legacy-peer-deps",
+        "archivos_requeridos": ["package.json"],
+        "descripcion": "Instalando dependencias de React..."
+    },
+    "vue": {
+        "comando": "npm install",
+        "archivos_requeridos": ["package.json"],
+        "descripcion": "Instalando dependencias de Vue.js..."
+    },
+    "angular": {
+        "comando": "npm install",
+        "archivos_requeridos": ["package.json"],
+        "descripcion": "Instalando dependencias de Angular..."
+    },
+    "nextjs": {
+        "comando": "npm install",
+        "archivos_requeridos": ["package.json"],
+        "descripcion": "Instalando dependencias de Next.js..."
+    },
     "python": {
         "comando": "pip install -r requirements.txt",
         "archivos_requeridos": ["requirements.txt"],
@@ -81,17 +101,21 @@ def instalar_dependencias(tipo_proyecto, callback_progreso=None):
             callback_progreso(f"⚠ No se encontró {', '.join(config['archivos_requeridos'])} - omitiendo instalación")
         return True
     
-    # Para Node.js, verificar si existe package-lock.json
+    # Para Node.js y frameworks basados en Node (React, Vue, Angular, etc), verificar package-lock.json
     comando_a_usar = config["comando"]
-    if tipo_proyecto == "nodejs":
+    if tipo_proyecto in ["nodejs", "react", "vue", "angular", "nextjs"]:
         package_lock = Path.cwd() / "package-lock.json"
         # Siempre usar npm install en lugar de npm ci para evitar problemas
-        comando_a_usar = "npm install --legacy-peer-deps"
+        if tipo_proyecto == "react":
+            comando_a_usar = "npm install --legacy-peer-deps"
+        else:
+            comando_a_usar = "npm install --legacy-peer-deps"
+        
         if callback_progreso:
             if package_lock.exists():
-                callback_progreso("📦 Instalando desde package.json y package-lock.json")
+                callback_progreso("Instalando dependencias con lock file")
             else:
-                callback_progreso("📦 Instalando desde package.json")
+                callback_progreso("Instalando dependencias")
     
     # Ejecutar comando de instalación
     try:
@@ -131,7 +155,7 @@ def instalar_dependencias(tipo_proyecto, callback_progreso=None):
         
         if resultado.returncode == 0:
             if callback_progreso:
-                callback_progreso("✓ Dependencias instaladas correctamente")
+                callback_progreso("Dependencias instaladas correctamente")
             print("✓ npm install completado exitosamente")
             
             # Pequeña pausa para asegurar que todos los archivos se escribieron
@@ -206,13 +230,13 @@ def restaurar_version_cli(version_elegida, auto_instalar=True, callback_progreso
     archivos_eliminados = 0
     
     if callback_progreso:
-        callback_progreso("🗑️  Limpiando directorio actual...")
+        callback_progreso("Limpiando directorio actual")
     
     for item in directorio_actual.iterdir():
         if item.name != ".cronux" and not item.name.startswith('.git'):
             try:
                 if callback_progreso:
-                    callback_progreso(f"  ⊗ Eliminando: {item.name}")
+                    callback_progreso(f"Eliminando {item.name}")
                 
                 if item.is_file():
                     item.unlink()
@@ -229,22 +253,26 @@ def restaurar_version_cli(version_elegida, auto_instalar=True, callback_progreso
     # Restaurar archivos de la versión
     archivos_restaurados = 0
     
+    # Contar total de archivos primero para calcular porcentaje
+    total_archivos = sum(1 for item in carpeta_version.iterdir() if item.name != "metadatos.json")
+    
     if callback_progreso:
-        callback_progreso("📂 Restaurando archivos...")
+        callback_progreso(f"Restaurando archivos (0/{total_archivos})")
     
     for item in carpeta_version.iterdir():
         if item.name != "metadatos.json":
             destino = directorio_actual / item.name
             try:
+                archivos_restaurados += 1
+                porcentaje = int((archivos_restaurados / total_archivos) * 100)
+                
                 if callback_progreso:
-                    callback_progreso(f"  → {item.name}")
+                    callback_progreso(f"{item.name} ({archivos_restaurados}/{total_archivos} - {porcentaje}%)")
                 
                 if item.is_file():
                     shutil.copy2(item, destino)
-                    archivos_restaurados += 1
                 elif item.is_dir():
                     shutil.copytree(item, destino)
-                    archivos_restaurados += 1
             except Exception as e:
                 error_msg = f"Error restaurando {item.name}: {e}"
                 print(error_msg)
@@ -256,13 +284,25 @@ def restaurar_version_cli(version_elegida, auto_instalar=True, callback_progreso
     print(f"Archivos restaurados: {archivos_restaurados}")
     
     # Mostrar instrucciones según el tipo de proyecto
-    if tipo_proyecto == "nodejs":
+    if tipo_proyecto in ["nodejs", "react", "vue", "angular", "nextjs"]:
         print("\n" + "="*50)
-        print("📦 PROYECTO NODE.JS RESTAURADO")
+        if tipo_proyecto == "react":
+            print("⚛️  PROYECTO REACT RESTAURADO")
+        elif tipo_proyecto == "vue":
+            print("💚 PROYECTO VUE.JS RESTAURADO")
+        elif tipo_proyecto == "angular":
+            print("🅰️  PROYECTO ANGULAR RESTAURADO")
+        elif tipo_proyecto == "nextjs":
+            print("▲ PROYECTO NEXT.JS RESTAURADO")
+        else:
+            print("📦 PROYECTO NODE.JS RESTAURADO")
         print("="*50)
         print("Para ejecutar el proyecto:")
         print("  1. cd " + str(directorio_actual))
-        print("  2. npm start")
+        if tipo_proyecto == "nextjs":
+            print("  2. npm run dev")
+        else:
+            print("  2. npm start")
         print("="*50 + "\n")
     elif tipo_proyecto == "python":
         print("\n" + "="*50)
@@ -277,10 +317,10 @@ def restaurar_version_cli(version_elegida, auto_instalar=True, callback_progreso
     if auto_instalar and tipo_proyecto != "general":
         print(f"DEBUG: Intentando instalar dependencias para tipo: {tipo_proyecto}")
         
-        # Para Node.js, detener procesos en ejecución primero
-        if tipo_proyecto == "nodejs":
+        # Para Node.js y frameworks basados en Node, detener procesos en ejecución primero
+        if tipo_proyecto in ["nodejs", "react", "vue", "angular", "nextjs"]:
             if callback_progreso:
-                callback_progreso("🛑 Deteniendo procesos de Node.js...")
+                callback_progreso("Deteniendo procesos de Node.js")
             try:
                 # Matar procesos de node que estén corriendo en este directorio
                 subprocess.run(
@@ -296,7 +336,7 @@ def restaurar_version_cli(version_elegida, auto_instalar=True, callback_progreso
                     timeout=5
                 )
                 if callback_progreso:
-                    callback_progreso("✓ Procesos detenidos")
+                    callback_progreso("Procesos detenidos")
                 print("✓ Procesos de Node.js detenidos")
             except Exception as e:
                 print(f"⚠ Error deteniendo procesos: {e}")
@@ -305,18 +345,18 @@ def restaurar_version_cli(version_elegida, auto_instalar=True, callback_progreso
             node_modules = directorio_actual / "node_modules"
             if node_modules.exists():
                 if callback_progreso:
-                    callback_progreso("🗑️  Limpiando node_modules anterior...")
+                    callback_progreso("Limpiando node_modules anterior")
                 try:
                     shutil.rmtree(node_modules)
                     print("✓ node_modules eliminado")
                     if callback_progreso:
-                        callback_progreso("✓ node_modules eliminado")
+                        callback_progreso("node_modules eliminado")
                 except Exception as e:
                     print(f"⚠ Error eliminando node_modules: {e}")
             
             # Limpiar cache de npm
             if callback_progreso:
-                callback_progreso("🧹 Limpiando cache de npm...")
+                callback_progreso("Limpiando cache de npm")
             try:
                 resultado_cache = subprocess.run(
                     "npm cache clean --force",
@@ -328,20 +368,23 @@ def restaurar_version_cli(version_elegida, auto_instalar=True, callback_progreso
                 )
                 if resultado_cache.returncode == 0:
                     if callback_progreso:
-                        callback_progreso("✓ Cache de npm limpiado")
+                        callback_progreso("Cache de npm limpiado")
                     print("✓ Cache de npm limpiado")
             except Exception as e:
                 print(f"⚠ Error limpiando cache: {e}")
         
         if callback_progreso:
-            callback_progreso(f"🔧 Preparando instalación para {tipo_proyecto}...")
+            callback_progreso(f"Preparando instalación para {tipo_proyecto}")
         resultado_instalacion = instalar_dependencias(tipo_proyecto, callback_progreso)
         if resultado_instalacion:
             print(f"DEBUG: Dependencias instaladas exitosamente")
             if callback_progreso:
-                callback_progreso("✅ Restauración completada")
-                if tipo_proyecto == "nodejs":
-                    callback_progreso("💡 Puedes ejecutar: npm start")
+                callback_progreso("Restauración completada")
+                if tipo_proyecto in ["nodejs", "react", "vue", "angular", "nextjs"]:
+                    if tipo_proyecto == "nextjs":
+                        callback_progreso("Ejecuta: npm run dev")
+                    else:
+                        callback_progreso("Ejecuta: npm start")
         else:
             print(f"DEBUG: Falló la instalación de dependencias")
             if callback_progreso:

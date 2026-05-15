@@ -100,151 +100,77 @@ class CronuxUIv2:
         return Noneaun
 
     def _create_project(self, nombre, ruta, tipo, create_initial_version=True):
-        """Crea un nuevo proyecto con loader Git-style timeline"""
-        from components.loader import LoaderView
+        """Crea un nuevo proyecto con loader de progreso en tiempo real"""
+        from components.terminal_loader import TerminalLoaderView
         
-        # Definir pasos del timeline
-        steps = [
-            {"title": "Creando estructura", "subtitle": "Inicializando carpeta .cronux", "status": "active"},
-            {"title": "Inicializando versión 1.0", "subtitle": "Preparando sistema de versiones", "status": "pending"},
-            {"title": "Guardando archivos", "subtitle": "Copiando contenido del proyecto", "status": "pending"},
-        ]
-        
-        # Crear loader con timeline
-        loader = LoaderView(self.page, "Creando proyecto", steps)
+        # Crear loader tipo terminal
+        terminal_loader = TerminalLoaderView(self.page, "Creando proyecto")
         
         # Crear dialog
-        dialog = ft.AlertDialog(
+        progress_dialog = ft.AlertDialog(
             modal=True,
-            content=ft.Container(
-                content=loader.build(),
-                width=600,
-                height=500,
-                padding=ft.Padding.all(0),
-            ),
+            content=terminal_loader.build(),
             shape=ft.RoundedRectangleBorder(radius=20),
             bgcolor="#F7FAFC",
         )
         
-        self.page.overlay.append(dialog)
-        dialog.open = True
+        self.page.overlay.append(progress_dialog)
+        progress_dialog.open = True
         self.page.update()
+        
+        # Callback para actualizar progreso en tiempo real
+        def actualizar_progreso(mensaje):
+            """Callback que recibe mensajes de progreso de las funciones CLI"""
+            print(f"[PROGRESS] {mensaje}")
+            
+            # Agregar mensaje a la terminal
+            terminal_loader.add_message(mensaje)
+            terminal_loader.update_display()
         
         # Función async para crear el proyecto
         async def crear_proyecto_async():
             import asyncio
             
             try:
-                # Paso 1: Creando estructura
-                await asyncio.sleep(0.5)
-                steps[0]["status"] = "completed"
-                steps[1]["status"] = "active"
-                loader.update_steps(steps)
+                # Pequeña pausa inicial
+                await asyncio.sleep(0.2)
                 
-                if create_initial_version:
-                    # Paso 2: Inicializando versión
-                    await asyncio.sleep(0.5)
-                    steps[1]["status"] = "completed"
-                    steps[2]["status"] = "active"
-                    loader.update_steps(steps)
-                    
-                    # Paso 3: Guardando archivos (operación real)
-                    proyecto_info = await asyncio.to_thread(
-                        crear_proyecto_ui, nombre, ruta, tipo, None
-                    )
-                    
-                    await asyncio.sleep(0.5)
-                    steps[2]["status"] = "completed"
-                    loader.update_steps(steps)
-                    
-                    if proyecto_info:
-                        # Recargar lista desde archivo (ya fue guardado por crear_proyecto_ui)
-                        self.proyectos = cargar_lista_proyectos()
-                        
-                        # Pequeña pausa para ver el timeline completo
-                        await asyncio.sleep(0.8)
-                        
-                        # Cerrar diálogo
-                        dialog.open = False
-                        self.page.update()
-                        
-                        # Abrir directamente el proyecto creado
-                        self.show_project(proyecto_info)
-                    else:
-                        # Error
-                        dialog.open = False
-                        self.page.update()
-                        self._show_error_snackbar("Error al crear el proyecto")
-                else:
-                    # Crear proyecto sin versión inicial (solo estructura)
-                    import os
-                    os.chdir(ruta)
-                    
-                    # Crear carpeta .cronux
-                    carpeta_cronux = Path(ruta) / ".cronux"
-                    carpeta_cronux.mkdir(exist_ok=True)
-                    
-                    # Crear datos del proyecto
-                    import json
-                    from datetime import datetime
-                    
-                    datos_proyecto = {
-                        "nombre": nombre,
-                        "tipo": tipo,
-                        "fecha_creacion": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        "autor": "usuario"
-                    }
-                    
-                    # Guardar JSON
-                    archivo_proyecto = carpeta_cronux / "proyecto.json"
-                    with open(archivo_proyecto, "w") as f:
-                        json.dump(datos_proyecto, f, indent=2)
-                    
-                    # Crear carpeta de versiones vacía
-                    carpeta_versiones = carpeta_cronux / "versiones"
-                    carpeta_versiones.mkdir(exist_ok=True)
-                    
-                    steps[1]["status"] = "completed"
-                    steps[2]["status"] = "completed"
-                    loader.update_steps(steps)
-                    
-                    # Agregar a la lista
-                    from cli_integration import obtener_icono_por_tipo
-                    
-                    proyecto = {
-                        "nombre": nombre,
-                        "ruta": ruta,
-                        "tipo": tipo,
-                        "icono": obtener_icono_por_tipo(tipo),
-                        "versiones": [],
-                        "tamaño_total": "0 B",
-                        "fecha_creacion": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    }
-                    self.proyectos.append(proyecto)
-                    
-                    # Guardar lista de proyectos (deduplicando)
-                    guardar_lista_proyectos(self.proyectos)
+                # Crear proyecto con callback de progreso
+                proyecto_info = crear_proyecto_ui(nombre, ruta, tipo, actualizar_progreso)
+                
+                # Marcar como completado
+                terminal_loader.set_completed(success=bool(proyecto_info))
+                
+                # Pequeña pausa para ver el resultado
+                await asyncio.sleep(1.5)
+                
+                # Cerrar dialog
+                progress_dialog.open = False
+                self.page.update()
+                
+                if proyecto_info:
+                    # Recargar lista desde archivo (ya fue guardado por crear_proyecto_ui)
                     self.proyectos = cargar_lista_proyectos()
                     
-                    # Pequeña pausa para ver el timeline completo
-                    await asyncio.sleep(0.8)
-                    
-                    # Cerrar diálogo
-                    dialog.open = False
-                    self.page.update()
-                    
                     # Abrir directamente el proyecto creado
-                    self.show_project(proyecto)
-                    
+                    self.show_project(proyecto_info)
+                else:
+                    # Error
+                    self._show_error_snackbar("Error al crear el proyecto")
+            
             except Exception as e:
                 import traceback
                 error_detail = traceback.format_exc()
-                print(f"Error creando proyecto: {error_detail}")
-                dialog.open = False
+                print(f"Error en creación: {error_detail}")
+                terminal_loader.set_completed(success=False)
+                terminal_loader.add_message(f"❌ Error: {str(e)}")
+                terminal_loader.update_display()
+                await asyncio.sleep(2)
+                progress_dialog.open = False
                 self.page.update()
                 self._show_error_snackbar(f"Error: {str(e)}")
         
-        # Ejecutar con run_task para permitir actualizaciones de UI
+        # Ejecutar con run_task
         self.page.run_task(crear_proyecto_async)
     
     def _show_error_snackbar(self, mensaje):

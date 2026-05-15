@@ -109,8 +109,15 @@ def guardar_version_cli(mensaje, callback_progreso=None):
     archivos_copiados = 0
     archivos_excluidos = 0
     
+    # Contar total de archivos primero (excluyendo .cronux y .git)
+    total_archivos = sum(1 for item in directorio_actual.iterdir() 
+                        if item.name != ".cronux" and not item.name.startswith('.git') 
+                        and not debe_excluir(item.name, tipo_proyecto))
+    
     if callback_progreso:
-        callback_progreso("📂 Analizando archivos del proyecto...")
+        callback_progreso(f"Analizando archivos del proyecto (0/{total_archivos})")
+    
+    archivos_procesados = 0
     
     for item in directorio_actual.iterdir():
         if item.name == ".cronux" or item.name.startswith('.git'):
@@ -125,8 +132,11 @@ def guardar_version_cli(mensaje, callback_progreso=None):
         
         destino = carpeta_version / item.name
         try:
+            archivos_procesados += 1
+            porcentaje = int((archivos_procesados / total_archivos) * 100) if total_archivos > 0 else 100
+            
             if callback_progreso:
-                callback_progreso(f"  ✓ Guardando: {item.name}")
+                callback_progreso(f"{item.name} ({archivos_procesados}/{total_archivos} - {porcentaje}%)")
             
             if item.is_file():
                 shutil.copy2(item, destino)

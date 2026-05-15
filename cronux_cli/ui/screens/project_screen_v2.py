@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from cli_integration import guardar_version_ui, restaurar_version_ui, eliminar_proyecto_ui, abrir_carpeta_proyecto, exportar_proyecto_ui
 from components.loader import LoaderView
+from components.terminal_loader import TerminalLoaderView
 
 
 class ProjectScreenV2:
@@ -1188,62 +1189,121 @@ class ProjectScreenV2:
         self.page.update()
     
     def _delete_project(self):
-        """Elimina el proyecto con confirmación"""
+        """Elimina el proyecto con confirmación y loader"""
         def confirmar_eliminacion():
             dialog.open = False
             self.page.update()
             
-            # Mostrar loader con timeline
+            # Mostrar loader con progreso en tiempo real
             self._show_async_progress_dialog("Eliminando proyecto", "delete")
         
+        # Contar versiones y calcular tamaño total
+        versiones = self.proyecto.get("versiones", [])
+        num_versiones = len(versiones)
+        tamaño_total = self.proyecto.get("tamaño_total", "0 B")
+        
+        # Modal minimalista estilo Vercel con más info
         dialog = ft.AlertDialog(
             modal=True,
-            title=ft.Text("Eliminar Proyecto", weight=ft.FontWeight.BOLD),
             content=ft.Container(
                 content=ft.Column([
-                    ft.Icon(ft.Icons.WARNING_AMBER_ROUNDED, size=48, color="#F56565"),
-                    ft.Container(height=16),
+                    # Título minimalista
                     ft.Text(
-                        "¿Estás seguro de eliminar este proyecto?",
-                        size=16,
+                        "Eliminar Proyecto",
+                        size=15,
                         weight=ft.FontWeight.W_600,
-                        color="#2D3748",
-                        text_align=ft.TextAlign.CENTER,
+                        color="#171717",
                     ),
-                    ft.Container(height=8),
+                    
+                    ft.Container(height=4),
+                    
                     ft.Text(
-                        "Esta acción eliminará permanentemente todas las versiones guardadas.",
-                        size=14,
-                        color="#718096",
-                        text_align=ft.TextAlign.CENTER,
+                        "Esta acción no se puede deshacer",
+                        size=12,
+                        color="#DC2626",
                     ),
+                    
+                    ft.Container(height=16),
+                    
+                    # Info del proyecto
+                    ft.Container(
+                        content=ft.Column([
+                            ft.Row([
+                                ft.Column([
+                                    ft.Text("Proyecto", size=11, color="#737373"),
+                                    ft.Text(self.proyecto.get('nombre', ''), size=13, weight=ft.FontWeight.W_500, color="#171717", font_family="monospace"),
+                                ], spacing=2, expand=True),
+                            ]),
+                            ft.Container(height=10),
+                            ft.Row([
+                                ft.Column([
+                                    ft.Text("Versiones", size=11, color="#737373"),
+                                    ft.Text(f"{num_versiones} guardadas", size=13, weight=ft.FontWeight.W_400, color="#171717"),
+                                ], spacing=2),
+                                ft.Container(width=20),
+                                ft.Column([
+                                    ft.Text("Tamaño total", size=11, color="#737373"),
+                                    ft.Text(tamaño_total, size=13, weight=ft.FontWeight.W_400, color="#171717"),
+                                ], spacing=2, expand=True),
+                            ]),
+                        ], spacing=0),
+                        padding=ft.Padding.all(12),
+                        border_radius=6,
+                        bgcolor="#FEF2F2",
+                    ),
+                    
                     ft.Container(height=12),
+                    
+                    # Advertencia
                     ft.Container(
                         content=ft.Text(
-                            f"Proyecto: {self.proyecto.get('nombre', '')}",
-                            size=13,
-                            color="#2D3748",
-                            weight=ft.FontWeight.W_600,
+                            "Se eliminarán permanentemente todas las versiones y archivos guardados",
+                            size=11,
+                            color="#737373",
                         ),
                         padding=ft.Padding.all(12),
-                        border_radius=8,
-                        bgcolor="#F7FAFC",
+                        border_radius=6,
+                        bgcolor="#FAFAFA",
                     ),
-                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, tight=True),
-                width=400,
+                    
+                    ft.Container(height=16),
+                    
+                    # Línea separadora
+                    ft.Container(
+                        height=1,
+                        bgcolor="#E5E5E5",
+                    ),
+                    
+                    ft.Container(height=12),
+                    
+                    # Botones minimalistas
+                    ft.Row([
+                        ft.TextButton(
+                            content=ft.Text("Cancelar", size=13, weight=ft.FontWeight.W_500, color="#737373"),
+                            on_click=lambda _: self._close_dialog(dialog),
+                        ),
+                        
+                        ft.Container(expand=True),
+                        
+                        ft.ElevatedButton(
+                            content=ft.Text("Eliminar", size=13, weight=ft.FontWeight.W_500, color="#FFFFFF"),
+                            on_click=lambda _: confirmar_eliminacion(),
+                            style=ft.ButtonStyle(
+                                bgcolor="#DC2626",
+                                color="#FFFFFF",
+                                padding=ft.Padding.symmetric(horizontal=20, vertical=10),
+                                shape=ft.RoundedRectangleBorder(radius=6),
+                            ),
+                        ),
+                    ], alignment=ft.MainAxisAlignment.END),
+                    
+                ], horizontal_alignment=ft.CrossAxisAlignment.START, spacing=0),
+                padding=ft.Padding.all(20),
+                width=420,
+                bgcolor="#FFFFFF",
             ),
-            actions=[
-                ft.TextButton("Cancelar", on_click=lambda _: self._close_dialog(dialog)),
-                ft.ElevatedButton(
-                    "Eliminar",
-                    on_click=lambda _: confirmar_eliminacion(),
-                    style=ft.ButtonStyle(
-                        bgcolor="#F56565",
-                        color="#FFFFFF",
-                    ),
-                ),
-            ],
-            actions_alignment=ft.MainAxisAlignment.END,
+            shape=ft.RoundedRectangleBorder(radius=8),
+            bgcolor="#FFFFFF",
         )
         
         self.page.overlay.append(dialog)
@@ -1278,17 +1338,18 @@ class ProjectScreenV2:
     
     # Métodos de versiones
     def _save_version(self):
-        """Guarda una nueva versión con modal compacto y genial"""
+        """Guarda una nueva versión con modal minimalista estilo Vercel"""
         # Crear campo de texto para el mensaje
         mensaje_field = ft.TextField(
             hint_text="Ej: Agregadas nuevas funcionalidades...",
             multiline=True,
             min_lines=2,
             max_lines=3,
-            border_radius=10,
-            border_color="#E2E8F0",
-            focused_border_color="#667EEA",
+            border_radius=6,
+            border_color="#E5E5E5",
+            focused_border_color="#171717",
             text_size=13,
+            bgcolor="#FAFAFA",
         )
         
         def guardar():
@@ -1300,118 +1361,98 @@ class ProjectScreenV2:
             # Mostrar loader con timeline async
             self._show_async_progress_dialog("Guardando versión", "save", mensaje)
         
-        # Modal compacto y genial
+        # Calcular próximo número de versión
+        versiones = self.proyecto.get("versiones", [])
+        if versiones:
+            ultima_version = max([v.get("numero", 1) for v in versiones])
+            proxima_version = ultima_version + 0.1
+        else:
+            proxima_version = 1.1
+        
+        # Modal minimalista estilo Vercel con más info
         dialog = ft.AlertDialog(
             modal=True,
             content=ft.Container(
                 content=ft.Column([
-                    # Icono flotante compacto
-                    ft.Container(
-                        content=ft.Icon(ft.Icons.SAVE_ROUNDED, size=48, color="#FFFFFF"),
-                        width=80,
-                        height=80,
-                        border_radius=40,
-                        bgcolor="#667EEA",
-                        alignment=ft.alignment.Alignment(0, 0),
-                    ),
-                    
-                    ft.Container(height=20),
-                    
-                    # Título compacto
+                    # Título minimalista
                     ft.Text(
                         "Guardar Nueva Versión",
-                        size=24,
-                        weight=ft.FontWeight.BOLD,
-                        color="#1A202C",
-                        text_align=ft.TextAlign.CENTER,
+                        size=15,
+                        weight=ft.FontWeight.W_600,
+                        color="#171717",
                     ),
                     
-                    ft.Container(height=6),
+                    ft.Container(height=4),
                     
                     ft.Text(
                         "Describe los cambios realizados",
-                        size=14,
-                        color="#718096",
-                        text_align=ft.TextAlign.CENTER,
+                        size=12,
+                        color="#737373",
                     ),
                     
-                    ft.Container(height=20),
+                    ft.Container(height=16),
                     
-                    # Campo de texto compacto
-                    ft.Container(
-                        content=mensaje_field,
-                        padding=ft.Padding.all(4),
-                        border_radius=12,
-                        bgcolor="#F7FAFC",
-                    ),
-                    
-                    ft.Container(height=8),
-                    
-                    # Tip compacto
+                    # Info de la versión
                     ft.Container(
                         content=ft.Row([
-                            ft.Icon(ft.Icons.LIGHTBULB_OUTLINE, size=14, color="#667EEA"),
-                            ft.Container(width=6),
-                            ft.Text(
-                                "Sé específico sobre los cambios",
-                                size=11,
-                                color="#A0AEC0",
-                                italic=True,
-                            ),
+                            ft.Column([
+                                ft.Text("Versión", size=11, color="#737373"),
+                                ft.Text(f"v{proxima_version:.1f}", size=13, weight=ft.FontWeight.W_500, color="#171717", font_family="monospace"),
+                            ], spacing=2),
+                            ft.Container(width=20),
+                            ft.Column([
+                                ft.Text("Proyecto", size=11, color="#737373"),
+                                ft.Text(self.proyecto.get("nombre", ""), size=13, weight=ft.FontWeight.W_400, color="#171717"),
+                            ], spacing=2, expand=True),
                         ]),
-                        padding=ft.Padding.symmetric(horizontal=10, vertical=6),
-                        border_radius=8,
-                        bgcolor="#EDF2F7",
+                        padding=ft.Padding.all(12),
+                        border_radius=6,
+                        bgcolor="#FAFAFA",
                     ),
                     
-                    ft.Container(height=24),
+                    ft.Container(height=12),
                     
-                    # Botones grandes
+                    # Campo de texto minimalista
+                    mensaje_field,
+                    
+                    ft.Container(height=16),
+                    
+                    # Línea separadora
+                    ft.Container(
+                        height=1,
+                        bgcolor="#E5E5E5",
+                    ),
+                    
+                    ft.Container(height=12),
+                    
+                    # Botones minimalistas
                     ft.Row([
-                        ft.Container(
-                            content=ft.TextButton(
-                                content=ft.Container(
-                                    content=ft.Text("Cancelar", size=15, weight=ft.FontWeight.W_600, color="#718096"),
-                                    padding=ft.Padding.all(14),
-                                    alignment=ft.alignment.Alignment(0, 0),
-                                ),
-                                on_click=lambda _: self._close_dialog(dialog),
-                            ),
-                            expand=1,
-                            border_radius=10,
-                            bgcolor="#F7FAFC",
-                            border=ft.Border.all(2, "#E2E8F0"),
+                        ft.TextButton(
+                            content=ft.Text("Cancelar", size=13, weight=ft.FontWeight.W_500, color="#737373"),
+                            on_click=lambda _: self._close_dialog(dialog),
                         ),
                         
-                        ft.Container(width=10),
+                        ft.Container(expand=True),
                         
-                        ft.Container(
-                            content=ft.ElevatedButton(
-                                content=ft.Container(
-                                    content=ft.Row([
-                                        ft.Icon(ft.Icons.CHECK_CIRCLE, size=18, color="#FFFFFF"),
-                                        ft.Container(width=8),
-                                        ft.Text("Guardar", size=15, weight=ft.FontWeight.BOLD, color="#FFFFFF"),
-                                    ], alignment=ft.MainAxisAlignment.CENTER),
-                                    padding=ft.Padding.all(14),
-                                ),
-                                on_click=lambda _: guardar(),
-                                style=ft.ButtonStyle(
-                                    bgcolor="#667EEA",
-                                    elevation=0,
-                                    shape=ft.RoundedRectangleBorder(radius=10),
-                                ),
+                        ft.ElevatedButton(
+                            content=ft.Text("Guardar", size=13, weight=ft.FontWeight.W_500, color="#FFFFFF"),
+                            on_click=lambda _: guardar(),
+                            style=ft.ButtonStyle(
+                                bgcolor="#171717",
+                                color="#FFFFFF",
+                                padding=ft.Padding.symmetric(horizontal=20, vertical=10),
+                                shape=ft.RoundedRectangleBorder(radius=6),
                             ),
-                            expand=2,
                         ),
-                    ]),
+                    ], alignment=ft.MainAxisAlignment.END),
                     
-                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                padding=ft.Padding.all(28),
-                width=480,
-                border_radius=20,
+                ], horizontal_alignment=ft.CrossAxisAlignment.START, spacing=0),
+                padding=ft.Padding.all(20),
+                width=420,
                 bgcolor="#FFFFFF",
             ),
+            shape=ft.RoundedRectangleBorder(radius=8),
+            bgcolor="#FFFFFF",
         )
         
         self.page.overlay.append(dialog)
@@ -1419,7 +1460,7 @@ class ProjectScreenV2:
         self.page.update()
     
     def _restore_version(self, version):
-        """Restaura una versión con AlertDialog simple y loader async"""
+        """Restaura una versión con modal minimalista estilo Vercel"""
         numero_version = version.get("numero", 1)
         
         def confirmar(_):
@@ -1430,146 +1471,117 @@ class ProjectScreenV2:
             # Mostrar loader con timeline async
             self._show_async_progress_dialog("Restaurando versión", "restore", numero_version)
         
-        # AlertDialog simple como el de guardar
+        # Modal minimalista estilo Vercel con más info
         dialog = ft.AlertDialog(
             modal=True,
             content=ft.Container(
                 content=ft.Column([
-                    # Icono
-                    ft.Container(
-                        content=ft.Icon(ft.Icons.RESTORE_ROUNDED, size=48, color="#FFFFFF"),
-                        width=80,
-                        height=80,
-                        border_radius=40,
-                        bgcolor="#ED8936",
-                        alignment=ft.alignment.Alignment(0, 0),
-                    ),
-                    
-                    ft.Container(height=20),
-                    
-                    # Título
+                    # Título minimalista
                     ft.Text(
                         "Restaurar Versión",
-                        size=24,
-                        weight=ft.FontWeight.BOLD,
-                        color="#1A202C",
-                        text_align=ft.TextAlign.CENTER,
+                        size=15,
+                        weight=ft.FontWeight.W_600,
+                        color="#171717",
                     ),
                     
-                    ft.Container(height=6),
+                    ft.Container(height=4),
                     
                     ft.Text(
                         "Se reemplazarán los archivos actuales",
-                        size=14,
-                        color="#718096",
-                        text_align=ft.TextAlign.CENTER,
-                    ),
-                    
-                    ft.Container(height=20),
-                    
-                    # Badge de versión
-                    ft.Container(
-                        content=ft.Row([
-                            ft.Icon(ft.Icons.TAG, size=16, color="#667EEA"),
-                            ft.Container(width=8),
-                            ft.Text(
-                                f"v{numero_version}",
-                                size=16,
-                                weight=ft.FontWeight.BOLD,
-                                color="#667EEA",
-                            ),
-                        ], alignment=ft.MainAxisAlignment.CENTER),
-                        padding=ft.Padding.symmetric(horizontal=16, vertical=8),
-                        border_radius=10,
-                        bgcolor="#EDF2F7",
+                        size=12,
+                        color="#737373",
                     ),
                     
                     ft.Container(height=16),
                     
+                    # Info de la versión
+                    ft.Container(
+                        content=ft.Column([
+                            ft.Row([
+                                ft.Column([
+                                    ft.Text("Versión", size=11, color="#737373"),
+                                    ft.Text(f"v{numero_version}", size=13, weight=ft.FontWeight.W_500, color="#171717", font_family="monospace"),
+                                ], spacing=2),
+                                ft.Container(width=20),
+                                ft.Column([
+                                    ft.Text("Fecha", size=11, color="#737373"),
+                                    ft.Text(version.get('fecha', 'Desconocida'), size=13, weight=ft.FontWeight.W_400, color="#171717"),
+                                ], spacing=2, expand=True),
+                            ]),
+                            ft.Container(height=10),
+                            ft.Row([
+                                ft.Column([
+                                    ft.Text("Archivos", size=11, color="#737373"),
+                                    ft.Text(str(version.get('archivos', 0)), size=13, weight=ft.FontWeight.W_400, color="#171717"),
+                                ], spacing=2),
+                                ft.Container(width=20),
+                                ft.Column([
+                                    ft.Text("Tamaño", size=11, color="#737373"),
+                                    ft.Text(version.get('tamaño', '0 B'), size=13, weight=ft.FontWeight.W_400, color="#171717"),
+                                ], spacing=2, expand=True),
+                            ]),
+                        ], spacing=0),
+                        padding=ft.Padding.all(12),
+                        border_radius=6,
+                        bgcolor="#FAFAFA",
+                    ),
+                    
+                    ft.Container(height=12),
+                    
                     # Descripción
                     ft.Container(
                         content=ft.Column([
-                            ft.Text("Cambios", size=12, color="#718096"),
+                            ft.Text("Cambios", size=11, color="#737373"),
                             ft.Container(height=4),
                             ft.Text(
                                 version.get('descripcion', 'Sin descripción'),
-                                size=14,
-                                color="#1A202C",
-                                weight=ft.FontWeight.W_600,
+                                size=12,
+                                color="#171717",
                             ),
-                        ]),
+                        ], spacing=0),
                         padding=ft.Padding.all(12),
-                        border_radius=10,
-                        bgcolor="#F7FAFC",
+                        border_radius=6,
+                        bgcolor="#FAFAFA",
                     ),
                     
-                    ft.Container(height=8),
+                    ft.Container(height=16),
                     
-                    # Advertencia
+                    # Línea separadora
                     ft.Container(
-                        content=ft.Row([
-                            ft.Icon(ft.Icons.INFO_OUTLINE, size=14, color="#ED8936"),
-                            ft.Container(width=6),
-                            ft.Text(
-                                "Los archivos actuales serán reemplazados",
-                                size=11,
-                                color="#A0AEC0",
-                                italic=True,
-                            ),
-                        ]),
-                        padding=ft.Padding.symmetric(horizontal=10, vertical=6),
-                        border_radius=8,
-                        bgcolor="#FFFAF0",
+                        height=1,
+                        bgcolor="#E5E5E5",
                     ),
                     
-                    ft.Container(height=24),
+                    ft.Container(height=12),
                     
-                    # Botones
+                    # Botones minimalistas
                     ft.Row([
-                        ft.Container(
-                            content=ft.TextButton(
-                                content=ft.Container(
-                                    content=ft.Text("Cancelar", size=15, weight=ft.FontWeight.W_600, color="#718096"),
-                                    padding=ft.Padding.all(14),
-                                    alignment=ft.alignment.Alignment(0, 0),
-                                ),
-                                on_click=lambda _: self._close_dialog(dialog),
-                            ),
-                            expand=1,
-                            border_radius=10,
-                            bgcolor="#F7FAFC",
-                            border=ft.Border.all(2, "#E2E8F0"),
+                        ft.TextButton(
+                            content=ft.Text("Cancelar", size=13, weight=ft.FontWeight.W_500, color="#737373"),
+                            on_click=lambda _: self._close_dialog(dialog),
                         ),
                         
-                        ft.Container(width=10),
+                        ft.Container(expand=True),
                         
-                        ft.Container(
-                            content=ft.ElevatedButton(
-                                content=ft.Container(
-                                    content=ft.Row([
-                                        ft.Icon(ft.Icons.RESTORE, size=18, color="#FFFFFF"),
-                                        ft.Container(width=8),
-                                        ft.Text("Restaurar", size=15, weight=ft.FontWeight.BOLD, color="#FFFFFF"),
-                                    ], alignment=ft.MainAxisAlignment.CENTER),
-                                    padding=ft.Padding.all(14),
-                                ),
-                                on_click=confirmar,
-                                style=ft.ButtonStyle(
-                                    bgcolor="#ED8936",
-                                    elevation=0,
-                                    shape=ft.RoundedRectangleBorder(radius=10),
-                                ),
+                        ft.ElevatedButton(
+                            content=ft.Text("Restaurar", size=13, weight=ft.FontWeight.W_500, color="#FFFFFF"),
+                            on_click=confirmar,
+                            style=ft.ButtonStyle(
+                                bgcolor="#171717",
+                                color="#FFFFFF",
+                                padding=ft.Padding.symmetric(horizontal=20, vertical=10),
+                                shape=ft.RoundedRectangleBorder(radius=6),
                             ),
-                            expand=2,
                         ),
-                    ]),
+                    ], alignment=ft.MainAxisAlignment.END),
                     
-                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                padding=ft.Padding.all(28),
-                width=480,
-                border_radius=20,
+                ], horizontal_alignment=ft.CrossAxisAlignment.START, spacing=0),
+                padding=ft.Padding.all(20),
+                width=420,
                 bgcolor="#FFFFFF",
             ),
+            shape=ft.RoundedRectangleBorder(radius=8),
+            bgcolor="#FFFFFF",
         )
         
         self.page.overlay.append(dialog)
@@ -1774,55 +1786,15 @@ class ProjectScreenV2:
         self.page.update()
 
     def _show_async_progress_dialog(self, title, operation_type, *args):
-            """Muestra un loader con timeline y ejecuta la operación con progreso REAL"""
-            # Definir pasos según el tipo de operación
-            if operation_type == "save":
-                steps = [
-                    {"title": "Preparando archivos", "subtitle": "Analizando cambios en el proyecto", "status": "active"},
-                    {"title": "Creando snapshot", "subtitle": "Guardando estado actual", "status": "pending"},
-                    {"title": "Finalizando", "subtitle": "Actualizando historial", "status": "pending"},
-                ]
-            elif operation_type == "restore":
-                steps = [
-                    {"title": "Leyendo versión", "subtitle": "Cargando snapshot guardado", "status": "active"},
-                    {"title": "Restaurando archivos", "subtitle": "Aplicando cambios al proyecto", "status": "pending"},
-                    {"title": "Finalizando", "subtitle": "Actualizando estado", "status": "pending"},
-                ]
-            elif operation_type == "delete":
-                steps = [
-                    {"title": "Eliminando versiones", "subtitle": "Borrando snapshots guardados", "status": "active"},
-                    {"title": "Limpiando archivos", "subtitle": "Removiendo carpeta .cronux", "status": "pending"},
-                    {"title": "Finalizando", "subtitle": "Actualizando lista de proyectos", "status": "pending"},
-                ]
-            elif operation_type == "export":
-                steps = [
-                    {"title": "Preparando archivos", "subtitle": "Recopilando contenido del proyecto", "status": "active"},
-                    {"title": "Comprimiendo", "subtitle": "Creando archivo ZIP", "status": "pending"},
-                    {"title": "Finalizando", "subtitle": "Guardando en destino", "status": "pending"},
-                ]
-            elif operation_type == "delete_version":
-                steps = [
-                    {"title": "Localizando versión", "subtitle": "Buscando snapshot a eliminar", "status": "active"},
-                    {"title": "Eliminando archivos", "subtitle": "Borrando snapshot", "status": "pending"},
-                    {"title": "Finalizando", "subtitle": "Actualizando historial", "status": "pending"},
-                ]
-            else:
-                steps = [
-                    {"title": "Procesando", "subtitle": "Ejecutando operación", "status": "active"},
-                ]
-
-            # Crear loader con timeline
-            loader = LoaderView(self.page, title, steps)
-
+            """Muestra un loader tipo terminal con progreso REAL en tiempo real"""
+            
+            # Crear loader tipo terminal
+            terminal_loader = TerminalLoaderView(self.page, title)
+            
             # Crear dialog
             progress_dialog = ft.AlertDialog(
                 modal=True,
-                content=ft.Container(
-                    content=loader.build(),
-                    width=600,
-                    height=500,
-                    padding=ft.Padding.all(0),
-                ),
+                content=terminal_loader.build(),
                 shape=ft.RoundedRectangleBorder(radius=20),
                 bgcolor="#F7FAFC",
             )
@@ -1837,64 +1809,72 @@ class ProjectScreenV2:
                 """Callback que recibe mensajes de progreso de las funciones CLI"""
                 print(f"[PROGRESS] {mensaje}")
                 
-                # Actualizar steps según el mensaje
-                if "Preparando" in mensaje or "Analizando" in mensaje:
-                    if len(steps) > 0:
-                        steps[0]["status"] = "active"
-                        steps[0]["subtitle"] = mensaje
-                elif "Copiando" in mensaje or "Guardando" in mensaje or "Restaurando" in mensaje:
-                    if len(steps) > 0:
-                        steps[0]["status"] = "completed"
-                    if len(steps) > 1:
-                        steps[1]["status"] = "active"
-                        steps[1]["subtitle"] = mensaje
-                elif "Finalizando" in mensaje or "Completado" in mensaje:
-                    if len(steps) > 1:
-                        steps[1]["status"] = "completed"
-                    if len(steps) > 2:
-                        steps[2]["status"] = "active"
-                        steps[2]["subtitle"] = mensaje
+                # Agregar mensaje a la terminal
+                terminal_loader.add_message(mensaje)
                 
-                # Actualizar loader
+                # Forzar actualización inmediata de la UI
                 try:
-                    loader.update_steps(steps)
-                except Exception as e:
-                    print(f"[ERROR] No se pudo actualizar loader: {e}")
+                    self.page.update()
+                except:
+                    pass
 
             # Función async para ejecutar la operación
             async def ejecutar_operacion_async():
                 import asyncio
+                import threading
 
                 try:
-                    # Paso 1 - inicio
-                    await asyncio.sleep(0.3)
+                    # Pequeña pausa inicial
+                    await asyncio.sleep(0.2)
 
-                    # Paso 2 - Operación real con callback de progreso
-                    if operation_type == "save":
-                        mensaje = args[0] if args else "Versión guardada"
-                        resultado = guardar_version_ui(self.proyecto["ruta"], mensaje, actualizar_progreso)
-                    elif operation_type == "restore":
-                        numero_version = args[0] if args else 1
-                        resultado = restaurar_version_ui(self.proyecto["ruta"], numero_version, actualizar_progreso)
-                    elif operation_type == "delete":
-                        resultado = eliminar_proyecto_ui(self.proyecto["ruta"])
-                    elif operation_type == "export":
-                        ruta_destino = args[0] if args else ""
-                        resultado = exportar_proyecto_ui(self.proyecto["ruta"], ruta_destino)
-                    elif operation_type == "delete_version":
-                        numero_version = args[0] if args else 1
-                        from cli_integration import eliminar_version_ui
-                        resultado = eliminar_version_ui(self.proyecto["ruta"], numero_version)
-                    else:
-                        resultado = True
+                    # Variable para almacenar el resultado
+                    resultado = None
+                    error = None
 
-                    # Marcar todos los pasos como completados
-                    for step in steps:
-                        step["status"] = "completed"
-                    loader.update_steps(steps)
+                    # Función que ejecuta la operación en thread
+                    def ejecutar_en_thread():
+                        nonlocal resultado, error
+                        try:
+                            # Paso 2 - Operación real con callback de progreso
+                            if operation_type == "save":
+                                mensaje = args[0] if args else "Versión guardada"
+                                print(f"[DEBUG] Guardando versión con mensaje: {mensaje}")
+                                resultado = guardar_version_ui(self.proyecto["ruta"], mensaje, actualizar_progreso)
+                                print(f"[DEBUG] Resultado de guardar_version_ui: {resultado}")
+                            elif operation_type == "restore":
+                                numero_version = args[0] if args else 1
+                                resultado = restaurar_version_ui(self.proyecto["ruta"], numero_version, actualizar_progreso)
+                            elif operation_type == "delete":
+                                resultado = eliminar_proyecto_ui(self.proyecto["ruta"])
+                            elif operation_type == "export":
+                                ruta_destino = args[0] if args else ""
+                                resultado = exportar_proyecto_ui(self.proyecto["ruta"], ruta_destino)
+                            elif operation_type == "delete_version":
+                                numero_version = args[0] if args else 1
+                                from cli_integration import eliminar_version_ui
+                                resultado = eliminar_version_ui(self.proyecto["ruta"], numero_version)
+                            else:
+                                resultado = True
+                        except Exception as e:
+                            error = e
 
-                    # Pequeña pausa para ver el timeline completo
-                    await asyncio.sleep(0.5)
+                    # Ejecutar en thread separado
+                    thread = threading.Thread(target=ejecutar_en_thread)
+                    thread.start()
+
+                    # Esperar a que termine el thread
+                    while thread.is_alive():
+                        await asyncio.sleep(0.1)
+
+                    # Si hubo error, lanzarlo
+                    if error:
+                        raise error
+
+                    # Marcar como completado
+                    terminal_loader.set_completed(success=bool(resultado))
+
+                    # Pequeña pausa para ver el resultado
+                    await asyncio.sleep(1.5)
 
                     # Cerrar dialog
                     progress_dialog.open = False
@@ -1903,6 +1883,7 @@ class ProjectScreenV2:
                     # Manejar resultado
                     if resultado:
                         if operation_type == "save":
+                            print(f"[DEBUG] Versión guardada, actualizando UI con resultado: {resultado}")
                             self.proyecto = resultado
                             if self.on_refresh:
                                 self.on_refresh(self.proyecto["ruta"])
@@ -1943,6 +1924,10 @@ class ProjectScreenV2:
                     import traceback
                     error_detail = traceback.format_exc()
                     print(f"Error en operación: {error_detail}")
+                    terminal_loader.set_completed(success=False)
+                    terminal_loader.add_message(f"❌ Error: {str(e)}")
+                    terminal_loader.update_display()
+                    await asyncio.sleep(2)
                     progress_dialog.open = False
                     self.page.update()
                     self._show_error_snackbar(f"Error: {str(e)}")

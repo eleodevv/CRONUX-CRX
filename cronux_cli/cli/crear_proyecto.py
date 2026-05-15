@@ -15,7 +15,7 @@ def crear_proyecto_cli(nombre_proyecto, tipo_proyecto="general", callback_progre
         return False
     
     if callback_progreso:
-        callback_progreso("Inicializando proyecto...")
+        callback_progreso("Inicializando proyecto")
     
     # Crear carpeta .cronux
     carpeta_cronux = Path.cwd() / ".cronux"
@@ -35,7 +35,7 @@ def crear_proyecto_cli(nombre_proyecto, tipo_proyecto="general", callback_progre
         json.dump(datos_proyecto, f, indent=2)
     
     if callback_progreso:
-        callback_progreso("Creando versión inicial...")
+        callback_progreso("Estructura del proyecto creada")
     
     # Crear versión 1 automáticamente con el estado inicial
     carpeta_versiones = carpeta_cronux / "versiones"
@@ -64,23 +64,25 @@ def crear_proyecto_cli(nombre_proyecto, tipo_proyecto="general", callback_progre
     
     exclusiones = exclusiones_base + exclusiones_por_tipo.get(tipo_proyecto, [])
     
-    if callback_progreso:
-        callback_progreso("📂 Creando versión inicial...")
-    
+    # Contar archivos primero para calcular porcentaje
+    items_totales = []
     for item in directorio_actual.iterdir():
-        # Verificar exclusiones
         debe_excluir_item = any(item.name == excl or (excl.startswith("*") and item.name.endswith(excl[1:])) for excl in exclusiones)
-        
-        if debe_excluir_item:
-            archivos_excluidos += 1
-            if callback_progreso:
-                callback_progreso(f"  ⊗ Excluyendo: {item.name}")
-            continue
+        if not debe_excluir_item:
+            items_totales.append(item)
+    
+    total_items = len(items_totales)
+    
+    if callback_progreso:
+        callback_progreso(f"Creando versión inicial (0/{total_items})")
+    
+    for idx, item in enumerate(items_totales, 1):
+        porcentaje = int((idx / total_items) * 100) if total_items > 0 else 100
         
         destino = carpeta_version_1 / item.name
         try:
             if callback_progreso:
-                callback_progreso(f"  ✓ Incluyendo: {item.name}")
+                callback_progreso(f"{item.name} ({idx}/{total_items} - {porcentaje}%)")
             
             if item.is_file():
                 shutil.copy2(item, destino)
@@ -129,7 +131,7 @@ def crear_proyecto_cli(nombre_proyecto, tipo_proyecto="general", callback_progre
         json.dump(metadatos, f, indent=2)
     
     if callback_progreso:
-        callback_progreso("✓ Proyecto creado exitosamente")
+        callback_progreso("Proyecto creado exitosamente")
     
     print(f"\n  ✓  Proyecto inicializado")
     print(f"  ●  Nombre:   {nombre_proyecto}")
