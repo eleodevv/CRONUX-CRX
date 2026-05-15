@@ -191,6 +191,7 @@ def mostrar_ayuda():
         ("historial",          "Ver historial de versiones"),
         ("restaurar <v>",      "Restaurar una versión"),
         ("eliminar-version <v>", "Eliminar una versión específica"),
+        ("migrar",             "Migrar proyecto de v0.1.0 a v0.2.1"),
         ("editar-nombre",      "Cambiar el nombre del proyecto"),
         ("info",               "Ver información del proyecto"),
         ("eliminar",           "Eliminar el proyecto"),
@@ -273,6 +274,7 @@ def modo_interactivo():
                 ("💾", "Guardar versión"),
                 ("📜", "Ver historial"),
                 ("⏮️ ", "Restaurar versión"),
+                ("🔄", "Migrar proyecto (v0.1.0 → v0.2.1)"),
                 ("ℹ️ ", "Ver información"),
                 ("✏️ ", "Editar nombre"),
                 ("🗑️ ", "Eliminar versión"),
@@ -350,16 +352,19 @@ def modo_interactivo():
                 _cmd_historial()
             elif seleccion == 2:  # Restaurar versión
                 _cmd_restaurar_interactivo()
-            elif seleccion == 3:  # Ver información
+            elif seleccion == 3:  # Migrar proyecto
+                from funcion_verficar import migrar_versiones_a_enteros
+                migrar_versiones_a_enteros(silencioso=False)
+            elif seleccion == 4:  # Ver información
                 _cmd_info()
-            elif seleccion == 4:  # Editar nombre
+            elif seleccion == 5:  # Editar nombre
                 _cmd_editar_nombre()
-            elif seleccion == 5:  # Eliminar versión
+            elif seleccion == 6:  # Eliminar versión
                 _cmd_eliminar_version_interactivo()
-            elif seleccion == 6:  # Eliminar proyecto
+            elif seleccion == 7:  # Eliminar proyecto
                 _cmd_eliminar()
                 debe_salir = True
-            elif seleccion == 7:  # Salir
+            elif seleccion == 8:  # Salir
                 debe_salir = True
         else:
             if seleccion == 0:  # Crear nuevo proyecto

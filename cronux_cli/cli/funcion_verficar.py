@@ -54,7 +54,9 @@ def migrar_versiones_a_enteros(silencioso=False):
     carpeta_versiones = obtener_ruta_cronux() / "versiones"
     
     if not carpeta_versiones.exists():
-        return
+        if not silencioso:
+            print("  ⚠  No hay versiones para migrar")
+        return False
     
     # Obtener todas las versiones y ordenarlas
     versiones = []
@@ -67,17 +69,22 @@ def migrar_versiones_a_enteros(silencioso=False):
             continue
     
     if not versiones:
-        return
+        if not silencioso:
+            print("  ⚠  No hay versiones para migrar")
+        return False
     
     # Verificar si hay versiones con decimales
     tiene_decimales = any(num != int(num) for num, _ in versiones)
     
     if not tiene_decimales:
-        return  # Ya están en formato entero
+        if not silencioso:
+            print("  ✓  Las versiones ya están en formato entero")
+        return False  # Ya están en formato entero
     
     if not silencioso:
         print()
-        print(f"  {c(Color.YELLOW, '⚙')}  Migrando versiones al nuevo formato...")
+        print(f"  ⚙  Migrando versiones al nuevo formato...")
+        print(f"  📊 Versiones encontradas: {len(versiones)}")
     
     # Ordenar por número
     versiones.sort(key=lambda x: x[0])
@@ -88,6 +95,9 @@ def migrar_versiones_a_enteros(silencioso=False):
     try:
         # Mover todas a temporal con nuevo número
         for nuevo_num, (viejo_num, v_dir) in enumerate(versiones, start=1):
+            if not silencioso:
+                print(f"  → v{viejo_num} → v{nuevo_num}")
+            
             temp_path = temp_dir / f"version_{nuevo_num}"
             shutil.move(str(v_dir), str(temp_path))
             
@@ -120,6 +130,8 @@ def migrar_versiones_a_enteros(silencioso=False):
                     for nuevo_num, (viejo_num, _) in enumerate(versiones, start=1):
                         if abs(viejo_num - version_actual_vieja) < 0.01:  # Comparación con tolerancia
                             datos["version_actual"] = nuevo_num
+                            if not silencioso:
+                                print(f"  ✓  Versión actual: v{version_actual_vieja} → v{nuevo_num}")
                             break
                 except:
                     datos["version_actual"] = len(versiones)  # Última versión por defecto
@@ -128,7 +140,16 @@ def migrar_versiones_a_enteros(silencioso=False):
                 json.dump(datos, f, indent=2)
         
         if not silencioso:
-            print(f"  {c(Color.GREEN, '✓')}  Versiones migradas: {len(versiones)} versiones convertidas")
+            print()
+            print(f"  ✓  Migración completada: {len(versiones)} versiones convertidas")
+            print()
+        
+        return True
+        
+    except Exception as e:
+        if not silencioso:
+            print(f"  ✗  Error durante la migración: {e}")
+        return False
         
     finally:
         # Limpiar directorio temporal

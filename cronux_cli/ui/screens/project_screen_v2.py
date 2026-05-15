@@ -124,7 +124,25 @@ class ProjectScreenV2:
                     
                     ft.Container(expand=True),
                     
-                    # Solo botón Guardar Versión (visible en vista de versiones)
+                    # Botón Migrar (visible en vista de versiones)
+                    ft.OutlinedButton(
+                        content=ft.Row([
+                            ft.Icon(ft.Icons.UPGRADE_ROUNDED, size=16, color="#F59E0B"),
+                            ft.Container(width=6),
+                            ft.Text("Migrar", size=13, weight=ft.FontWeight.W_600, color="#F59E0B"),
+                        ], spacing=0),
+                        on_click=lambda _: self._migrate_project(),
+                        style=ft.ButtonStyle(
+                            side=ft.BorderSide(1.5, "#F59E0B"),
+                            padding=ft.Padding.symmetric(horizontal=16, vertical=10),
+                            shape=ft.RoundedRectangleBorder(radius=8),
+                        ),
+                        tooltip="Migrar proyecto de v0.1.0 a v0.2.1",
+                    ) if self.current_view == "versiones" else ft.Container(),
+                    
+                    ft.Container(width=12) if self.current_view == "versiones" else ft.Container(),
+                    
+                    # Botón Guardar Versión (visible en vista de versiones)
                     ft.ElevatedButton(
                         content=ft.Row([
                             ft.Icon(ft.Icons.SAVE_OUTLINED, size=16, color="#FFFFFF"),
@@ -1479,6 +1497,185 @@ class ProjectScreenV2:
                 bgcolor="#FFFFFF",
             ),
             shape=ft.RoundedRectangleBorder(radius=8),
+            bgcolor="#FFFFFF",
+        )
+        
+        self.page.overlay.append(dialog)
+        dialog.open = True
+        self.page.update()
+    
+    def _migrate_project(self):
+        """Migra el proyecto de v0.1.0 (decimales) a v0.2.1 (enteros)"""
+        from cli_integration import migrar_proyecto_ui
+        
+        def confirmar(_):
+            # Cerrar dialog
+            dialog.open = False
+            self.page.update()
+            
+            # Crear loader tipo terminal
+            terminal_loader = TerminalLoaderView(self.page, "Migrando proyecto")
+            
+            # Crear dialog
+            progress_dialog = ft.AlertDialog(
+                modal=True,
+                content=terminal_loader.build(),
+                shape=ft.RoundedRectangleBorder(radius=20),
+                bgcolor="#F7FAFC",
+            )
+            
+            self.page.overlay.append(progress_dialog)
+            progress_dialog.open = True
+            self.page.update()
+            
+            # Callback para actualizar progreso en tiempo real
+            def actualizar_progreso(mensaje):
+                """Callback que recibe mensajes de progreso"""
+                print(f"[MIGRATE] {mensaje}")
+                terminal_loader.add_message(mensaje)
+                terminal_loader.update_display()
+            
+            # Función async para migrar
+            async def migrar_async():
+                import asyncio
+                
+                try:
+                    # Pequeña pausa inicial
+                    await asyncio.sleep(0.2)
+                    
+                    # Migrar proyecto con callback de progreso
+                    proyecto_info = migrar_proyecto_ui(self.proyecto["ruta"], actualizar_progreso)
+                    
+                    # Marcar como completado
+                    terminal_loader.set_completed(success=bool(proyecto_info))
+                    
+                    # Pequeña pausa para ver el resultado
+                    await asyncio.sleep(2)
+                    
+                    # Cerrar dialog
+                    progress_dialog.open = False
+                    self.page.update()
+                    
+                    if proyecto_info:
+                        # Actualizar proyecto y refrescar UI
+                        self.proyecto = proyecto_info
+                        if self.on_refresh:
+                            self.on_refresh(self.proyecto["ruta"])
+                        
+                        # Reconstruir la pantalla
+                        self.page.controls.clear()
+                        self.page.add(self.build())
+                        self.page.update()
+                        
+                        self._show_success_snackbar("✅ Proyecto migrado exitosamente")
+                    else:
+                        self._show_error_snackbar("❌ Error al migrar el proyecto")
+                
+                except Exception as e:
+                    import traceback
+                    error_detail = traceback.format_exc()
+                    print(f"Error en migración: {error_detail}")
+                    terminal_loader.set_completed(success=False)
+                    terminal_loader.add_message(f"❌ Error: {str(e)}")
+                    terminal_loader.update_display()
+                    await asyncio.sleep(2)
+                    progress_dialog.open = False
+                    self.page.update()
+                    self._show_error_snackbar(f"Error: {str(e)}")
+            
+            # Ejecutar con run_task
+            self.page.run_task(migrar_async)
+        
+        # Modal minimalista estilo Vercel
+        dialog = ft.AlertDialog(
+            modal=True,
+            content=ft.Container(
+                content=ft.Column([
+                    # Icono de advertencia
+                    ft.Container(
+                        content=ft.Icon(ft.Icons.UPGRADE_ROUNDED, size=48, color="#F59E0B"),
+                        alignment=ft.alignment.Alignment(0, 0),
+                    ),
+                    
+                    ft.Container(height=16),
+                    
+                    # Título minimalista
+                    ft.Text(
+                        "Migrar Proyecto",
+                        size=18,
+                        weight=ft.FontWeight.BOLD,
+                        color="#171717",
+                        text_align=ft.TextAlign.CENTER,
+                    ),
+                    
+                    ft.Container(height=8),
+                    
+                    ft.Text(
+                        "Actualizar de v0.1.0 a v0.2.1",
+                        size=13,
+                        color="#737373",
+                        text_align=ft.TextAlign.CENTER,
+                    ),
+                    
+                    ft.Container(height=20),
+                    
+                    # Info de la migración
+                    ft.Container(
+                        content=ft.Column([
+                            ft.Text("¿Qué hace esta migración?", size=12, weight=ft.FontWeight.W_600, color="#171717"),
+                            ft.Container(height=8),
+                            ft.Text("• Convierte versiones decimales (1.0, 1.1, 1.2) a enteros (1, 2, 3)", size=11, color="#525252"),
+                            ft.Text("• Actualiza metadatos de todas las versiones", size=11, color="#525252"),
+                            ft.Text("• Mantiene todos tus archivos intactos", size=11, color="#525252"),
+                            ft.Container(height=8),
+                            ft.Text("⚠️  Esta operación es irreversible", size=11, weight=ft.FontWeight.W_500, color="#F59E0B"),
+                        ]),
+                        padding=ft.Padding.all(16),
+                        border_radius=8,
+                        bgcolor="#FAFAFA",
+                    ),
+                    
+                    ft.Container(height=20),
+                    
+                    # Línea separadora
+                    ft.Container(
+                        height=1,
+                        bgcolor="#E5E5E5",
+                    ),
+                    
+                    ft.Container(height=16),
+                    
+                    # Botones minimalistas
+                    ft.Row([
+                        ft.TextButton(
+                            content=ft.Text("Cancelar", size=13, weight=ft.FontWeight.W_500, color="#737373"),
+                            on_click=lambda _: self._close_dialog(dialog),
+                        ),
+                        
+                        ft.Container(expand=True),
+                        
+                        ft.ElevatedButton(
+                            content=ft.Row([
+                                ft.Icon(ft.Icons.UPGRADE_ROUNDED, size=16, color="#FFFFFF"),
+                                ft.Container(width=8),
+                                ft.Text("Migrar Ahora", size=13, weight=ft.FontWeight.W_600, color="#FFFFFF"),
+                            ]),
+                            on_click=confirmar,
+                            style=ft.ButtonStyle(
+                                bgcolor="#F59E0B",
+                                color="#FFFFFF",
+                                padding=ft.Padding.symmetric(horizontal=20, vertical=12),
+                                shape=ft.RoundedRectangleBorder(radius=8),
+                            ),
+                        ),
+                    ], alignment=ft.MainAxisAlignment.END),
+                    
+                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=0),
+                padding=ft.Padding.all(24),
+                width=480,
+                bgcolor="#FFFFFF",
+            ),
+            shape=ft.RoundedRectangleBorder(radius=12),
             bgcolor="#FFFFFF",
         )
         

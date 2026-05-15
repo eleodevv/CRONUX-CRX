@@ -45,6 +45,11 @@ class CronuxUIv2:
     
     def show_home(self):
         """Muestra la pantalla de inicio"""
+        # Recargar lista de proyectos cada vez que se muestra el home
+        print("[HOME] Recargando lista de proyectos...")
+        self.proyectos = cargar_lista_proyectos()
+        print(f"[HOME] Proyectos cargados: {len(self.proyectos)}")
+        
         self.current_screen = HomeScreen(
             page=self.page,
             on_new_project=self.show_wizard,

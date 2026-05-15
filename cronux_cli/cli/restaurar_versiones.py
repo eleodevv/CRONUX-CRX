@@ -289,6 +289,26 @@ def restaurar_version_cli(version_elegida, auto_instalar=True, callback_progreso
     print(f"Archivos eliminados: {archivos_eliminados}")
     print(f"Archivos restaurados: {archivos_restaurados}")
     
+    # Actualizar version_actual en proyecto.json
+    proyecto_json = obtener_ruta_cronux() / "proyecto.json"
+    if proyecto_json.exists():
+        try:
+            with open(proyecto_json, "r") as f:
+                datos_proyecto = json.load(f)
+            
+            # Actualizar versión actual (como entero)
+            try:
+                datos_proyecto["version_actual"] = int(float(version_elegida))
+            except (ValueError, TypeError):
+                datos_proyecto["version_actual"] = version_elegida
+            
+            with open(proyecto_json, "w") as f:
+                json.dump(datos_proyecto, f, indent=2)
+            
+            print(f"[OK] Versión actual actualizada a v{version_elegida}")
+        except Exception as e:
+            print(f"[WARN] No se pudo actualizar version_actual: {e}")
+    
     # Mostrar instrucciones según el tipo de proyecto
     if tipo_proyecto in ["nodejs", "react", "vue", "angular", "nextjs"]:
         print("\n" + "="*50)

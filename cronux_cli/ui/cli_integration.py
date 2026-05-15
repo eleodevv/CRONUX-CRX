@@ -905,3 +905,49 @@ def eliminar_version_ui(ruta_proyecto, numero_version):
         import traceback
         traceback.print_exc()
         return False
+
+
+
+def migrar_proyecto_ui(ruta_proyecto, callback_progreso=None):
+    """Migra un proyecto de v0.1.0 (decimales) a v0.2.1 (enteros)"""
+    import os
+    
+    # Cambiar al directorio del proyecto
+    os.chdir(ruta_proyecto)
+    
+    # Verificar que sea un proyecto Cronux
+    from funcion_verficar import verificarCronux, migrar_versiones_a_enteros
+    
+    if not verificarCronux():
+        if callback_progreso:
+            callback_progreso("❌ No es un proyecto Cronux válido")
+        return None
+    
+    # Callback para progreso
+    def progress_callback(msg):
+        if callback_progreso and callable(callback_progreso):
+            callback_progreso(msg)
+        print(f"[MIGRATE] {msg}")
+    
+    try:
+        progress_callback("🔍 Verificando versiones...")
+        
+        # Ejecutar migración
+        resultado = migrar_versiones_a_enteros(silencioso=False)
+        
+        if resultado:
+            progress_callback("✅ Migración completada exitosamente")
+            progress_callback("📊 Versiones convertidas a formato entero")
+        else:
+            progress_callback("ℹ️  No se requiere migración")
+            progress_callback("Las versiones ya están en formato correcto")
+        
+        # Leer información actualizada del proyecto
+        proyecto_info = leer_info_proyecto(ruta_proyecto)
+        return proyecto_info
+        
+    except Exception as e:
+        progress_callback(f"❌ Error durante la migración: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return None
