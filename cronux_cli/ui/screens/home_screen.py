@@ -2,6 +2,7 @@
 Pantalla de Inicio - Lista de proyectos con diseño moderno
 """
 import flet as ft
+import threading
 
 
 class HomeScreen:
@@ -15,8 +16,16 @@ class HomeScreen:
         # Proyectos
         self.proyectos = proyectos if proyectos is not None else []
         
+        # File watcher
+        self._watcher_thread = None
+        self._watcher_running = False
+        self._last_project_count = len(self.proyectos)
+        
         # Limpiar automáticamente proyectos deprecados al iniciar
         self._auto_limpiar_proyectos_deprecados()
+        
+        # Iniciar file watcher para detectar nuevos proyectos
+        self._start_project_watcher()
     
     def build(self):
         """Construye la pantalla principal"""
@@ -848,3 +857,65 @@ class HomeScreen:
                     self._show_success_snackbar("✓ Proyecto ya existe en la lista")
         except:
             self._show_error_snackbar("❌ Error al seleccionar carpeta")
+
+    
+    def _start_project_watcher(self):
+        """Inicia el file watcher para detectar nuevos proyectos creados desde CLI"""
+        import threading
+        import time
+        
+        def watch_projects():
+            """Thread que monitorea cambios en la lista de proyectos"""
+            while self._watcher_running:
+                try:
+                    # Recargar lista de proyectos desde el archivo
+                    from cli_integration import cargar_lista_proyectos
+                    proyectos_actuales = cargar_lista_proyectos()
+                    
+                    # Verificar si hay cambios en el número de proyectos
+                    count_actual = len(proyectos_actuales)
+                    if count_actual != self._last_project_count:
+                        print(f"[HOME-WATCHER] Detectado cambio en proyectos ({self._last_project_count} → {count_actual})")
+                        
+                        # Determinar si es nuevo proyecto o eliminación
+                        es_nuevo = count_actual > self._last_project_count
+                        
+                        # Actualizar contador
+                        self._last_project_count = count_actual
+                        
+                        # Actualizar lista de proyectos
+                        self.proyectos = proyectos_actuales
+                        
+                        # Reconstruir la UI
+                        try:
+                            self.page.controls.clear()
+                            self.page.add(self.build())
+                            self.page.update()
+                            
+                            # Mostrar notificación
+                            if es_nuevo:
+                                self._show_success_snackbar("✨ Nuevo proyecto detectado desde CLI")
+                            else:
+                                self._show_info_snackbar("🔄 Lista de proyectos actualizada")
+                        except Exception as e:
+                            print(f"[HOME-WATCHER] Error al actualizar UI: {e}")
+                    
+                    # Revisar cada 2 segundos
+                    time.sleep(2)
+                    
+                except Exception as e:
+                    print(f"[HOME-WATCHER] Error: {e}")
+                    time.sleep(2)
+        
+        # Iniciar thread del watcher
+        self._watcher_running = True
+        self._watcher_thread = threading.Thread(target=watch_projects, daemon=True)
+        self._watcher_thread.start()
+        print("[HOME-WATCHER] Project watcher iniciado")
+    
+    def _stop_project_watcher(self):
+        """Detiene el file watcher"""
+        self._watcher_running = False
+        if self._watcher_thread:
+            self._watcher_thread.join(timeout=2)
+        print("[HOME-WATCHER] Project watcher detenido")
