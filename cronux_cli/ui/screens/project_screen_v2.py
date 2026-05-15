@@ -26,6 +26,12 @@ class ProjectScreenV2:
         self.current_view = "versiones"  # versiones, estadisticas, configuracion
         self._operation_completed = False  # Flag para indicar que la operación terminó
         self._update_timer = None  # Timer para forzar actualizaciones
+        self._watcher_thread = None  # Thread del file watcher
+        self._watcher_running = False  # Flag para controlar el watcher
+        self._last_modified = None  # Última modificación del archivo
+        
+        # Iniciar file watcher
+        self._start_file_watcher()
     
     def build(self):
         """Construye la pantalla de proyecto"""
@@ -78,7 +84,7 @@ class ProjectScreenV2:
                         icon=ft.Icons.ARROW_BACK_ROUNDED,
                         icon_color="#718096",
                         icon_size=22,
-                        on_click=lambda _: self.on_back(),
+                        on_click=lambda _: self._handle_back(),
                         tooltip="Volver",
                     ),
                     
@@ -1805,6 +1811,103 @@ class ProjectScreenV2:
         self.page.overlay.append(snackbar)
         snackbar.open = True
         self.page.update()
+    
+    def _start_file_watcher(self):
+        """Inicia el file watcher para detectar cambios en proyecto.json"""
+        import time
+        import json
+        from pathlib import Path
+        
+        def watch_file():
+            """Thread que monitorea cambios en proyecto.json"""
+            proyecto_json = Path(self.proyecto.get("ruta", "")) / ".cronux" / "proyecto.json"
+            
+            if not proyecto_json.exists():
+                return
+            
+            # Guardar timestamp inicial
+            self._last_modified = proyecto_json.stat().st_mtime
+            
+            while self._watcher_running:
+                try:
+                    if proyecto_json.exists():
+                        current_mtime = proyecto_json.stat().st_mtime
+                        
+                        # Si el archivo cambió
+                        if current_mtime != self._last_modified:
+                            self._last_modified = current_mtime
+                            print(f"[WATCHER] Detectado cambio en proyecto.json")
+                            
+                            # Esperar un poco para asegurar que el archivo se escribió completamente
+                            time.sleep(0.5)
+                            
+                            # Recargar proyecto
+                            self._reload_project()
+                    
+                    # Revisar cada segundo
+                    time.sleep(1)
+                    
+                except Exception as e:
+                    print(f"[WATCHER] Error: {e}")
+                    time.sleep(1)
+        
+        # Iniciar thread del watcher
+        self._watcher_running = True
+        self._watcher_thread = threading.Thread(target=watch_file, daemon=True)
+        self._watcher_thread.start()
+        print("[WATCHER] File watcher iniciado")
+    
+    def _stop_file_watcher(self):
+        """Detiene el file watcher"""
+        self._watcher_running = False
+        if self._watcher_thread:
+            self._watcher_thread.join(timeout=2)
+        print("[WATCHER] File watcher detenido")
+    
+    def _handle_back(self):
+        """Maneja el botón de volver, deteniendo el watcher primero"""
+        self._stop_file_watcher()
+        self.on_back()
+    
+    def _reload_project(self):
+        """Recarga los datos del proyecto desde el archivo"""
+        try:
+            import json
+            from pathlib import Path
+            
+            proyecto_json = Path(self.proyecto.get("ruta", "")) / ".cronux" / "proyecto.json"
+            
+            if not proyecto_json.exists():
+                return
+            
+            # Leer proyecto actualizado
+            with open(proyecto_json) as f:
+                datos_proyecto = json.load(f)
+            
+            # Obtener versiones actualizadas usando cli_integration
+            from cli_integration import obtener_proyecto_ui
+            proyecto_actualizado = obtener_proyecto_ui(self.proyecto.get("ruta", ""))
+            
+            if proyecto_actualizado:
+                # Actualizar datos del proyecto
+                self.proyecto = proyecto_actualizado
+                
+                # Reconstruir la UI
+                print(f"[WATCHER] Recargando UI con {len(proyecto_actualizado.get('versiones', []))} versiones")
+                print(f"[WATCHER] Versión actual: {proyecto_actualizado.get('version_actual', 1)}")
+                
+                # Limpiar y reconstruir
+                self.page.controls.clear()
+                self.page.add(self.build())
+                self.page.update()
+                
+                # Mostrar notificación
+                self._show_success_snackbar("Proyecto actualizado desde CLI")
+                
+        except Exception as e:
+            print(f"[WATCHER] Error al recargar proyecto: {e}")
+            import traceback
+            traceback.print_exc()
 
     def _show_async_progress_dialog(self, title, operation_type, *args):
             """Muestra un loader tipo terminal con progreso REAL en tiempo real"""
@@ -1925,6 +2028,7 @@ class ProjectScreenV2:
                         elif operation_type == "delete":
                             self._show_success_snackbar("✓ Proyecto eliminado exitosamente")
                             await asyncio.sleep(1)
+                            self._stop_file_watcher()
                             self.on_back()
                         elif operation_type == "export":
                             self._show_success_snackbar(f"✓ Proyecto exportado: {Path(resultado).name}")

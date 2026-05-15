@@ -23,6 +23,67 @@ except ImportError as e:
 
 
 # ─────────────────────────────────────────────
+#  Configuración del CLI
+# ─────────────────────────────────────────────
+CONFIG_DIR = Path.home() / ".cronux"
+CONFIG_FILE = CONFIG_DIR / "config.json"
+
+def cargar_config():
+    """Carga la configuración del CLI"""
+    import json
+    
+    # Crear directorio si no existe
+    CONFIG_DIR.mkdir(exist_ok=True)
+    
+    # Configuración por defecto
+    config_default = {
+        "modo": "asistido",  # asistido o manual
+        "version": "0.2.0"
+    }
+    
+    if CONFIG_FILE.exists():
+        try:
+            with open(CONFIG_FILE) as f:
+                config = json.load(f)
+            # Asegurar que tenga todos los campos
+            for key, value in config_default.items():
+                if key not in config:
+                    config[key] = value
+            return config
+        except:
+            return config_default
+    else:
+        # Crear archivo de configuración
+        with open(CONFIG_FILE, "w") as f:
+            json.dump(config_default, f, indent=2)
+        return config_default
+
+def guardar_config(config):
+    """Guarda la configuración del CLI"""
+    import json
+    CONFIG_DIR.mkdir(exist_ok=True)
+    with open(CONFIG_FILE, "w") as f:
+        json.dump(config, f, indent=2)
+
+def cambiar_modo():
+    """Cambia entre modo asistido y manual"""
+    config = cargar_config()
+    modo_actual = config.get("modo", "asistido")
+    
+    if modo_actual == "asistido":
+        config["modo"] = "manual"
+        guardar_config(config)
+        ok("Modo cambiado a: Manual (comandos directos)")
+        info("Usa 'cronux ayuda' para ver los comandos disponibles")
+    else:
+        config["modo"] = "asistido"
+        guardar_config(config)
+        ok("Modo cambiado a: Asistido (navegación con flechas)")
+        info("Ejecuta 'cronux' para usar el modo interactivo")
+    print()
+
+
+# ─────────────────────────────────────────────
 #  Colores ANSI
 # ─────────────────────────────────────────────
 class Color:
@@ -115,8 +176,14 @@ def titulo(msg):
 #  Ayuda
 # ─────────────────────────────────────────────
 def mostrar_ayuda():
+    config = cargar_config()
+    modo_actual = config.get("modo", "asistido")
+    
     print(SPLASH)
     titulo("COMANDOS DISPONIBLES")
+    
+    print(f"  {c(Color.GRAY, 'Modo actual:')} {c(Color.CYAN, modo_actual.upper())}")
+    print()
 
     comandos = [
         ("crear  <nombre>",    "Crear un nuevo proyecto"),
@@ -127,6 +194,7 @@ def mostrar_ayuda():
         ("editar-nombre",      "Cambiar el nombre del proyecto"),
         ("info",               "Ver información del proyecto"),
         ("eliminar",           "Eliminar el proyecto"),
+        ("modo",               f"Cambiar a modo {'MANUAL' if modo_actual == 'asistido' else 'ASISTIDO'}"),
         ("ayuda",              "Mostrar esta ayuda"),
         ("--version",          "Ver versión del CLI"),
     ]
@@ -142,6 +210,7 @@ def mostrar_ayuda():
         "cronux historial",
         "cronux restaurar v1.2",
         "cronux info",
+        "cronux modo  # Cambiar entre asistido/manual",
     ]
     for ej in ejemplos:
         print(f"  {c(Color.GRAY, '$')} {c(Color.WHITE, ej)}")
@@ -152,13 +221,32 @@ def mostrar_ayuda():
 #  Modo interactivo (sin argumentos)
 # ─────────────────────────────────────────────
 def modo_interactivo():
+    """Modo interactivo con navegación por flechas"""
+    import sys
+    import tty
+    import termios
+    
+    def getch():
+        """Lee una tecla sin esperar Enter"""
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(fd)
+            ch = sys.stdin.read(1)
+            if ch == '\x1b':  # Secuencia de escape
+                ch2 = sys.stdin.read(1)
+                if ch2 == '[':
+                    ch3 = sys.stdin.read(1)
+                    return f'\x1b[{ch3}'
+            return ch
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+    
     while True:  # Loop continuo
-        print(SPLASH)
-
         en_proyecto = verificarCronux()
-
+        
+        # Obtener info del proyecto si estamos en uno
         if en_proyecto:
-            # Leer info del proyecto
             import json
             cronux_dir = Path.cwd() / ".cronux"
             proyecto_json = cronux_dir / "proyecto.json"
@@ -176,12 +264,6 @@ def modo_interactivo():
             if versiones_dir.exists():
                 num_versiones = len(list(versiones_dir.glob("version_*")))
 
-            print(f"  {c(Color.BOLD, 'Proyecto:')}  {icono_tipo(tipo)} {c(Color.CYAN, nombre)}")
-            print(f"  {c(Color.BOLD, 'Tipo:')}      {tipo}")
-            print(f"  {c(Color.BOLD, 'Versiones:')} {num_versiones}")
-            linea()
-            print()
-
             opciones = [
                 ("💾", "Guardar versión"),
                 ("📜", "Ver historial"),
@@ -193,54 +275,94 @@ def modo_interactivo():
                 ("🚪", "Salir"),
             ]
         else:
-            warn("No estás en un proyecto Cronux")
-            print()
+            nombre = None
+            tipo = None
+            num_versiones = 0
             opciones = [
                 ("🚀", "Crear nuevo proyecto"),
                 ("🚪", "Salir"),
             ]
-
-        for i, (ico, label) in enumerate(opciones, 1):
-            print(f"  {c(Color.CYAN, str(i) + '.')} {ico}  {label}")
-
-        print()
-        try:
-            eleccion = input(f"  {c(Color.GRAY, 'Selecciona una opción:')} ").strip()
-        except (KeyboardInterrupt, EOFError):
+        
+        seleccion = 0
+        
+        def mostrar_menu():
+            """Muestra el menú con la selección actual resaltada"""
+            print('\033[H', end='')  # Mover cursor al inicio
+            print(SPLASH)
+            
+            if en_proyecto:
+                print(f"  {c(Color.BOLD, 'Proyecto:')}  {icono_tipo(tipo)} {c(Color.CYAN, nombre)}")
+                print(f"  {c(Color.BOLD, 'Tipo:')}      {tipo}")
+                print(f"  {c(Color.BOLD, 'Versiones:')} {num_versiones}")
+                linea()
+            else:
+                warn("No estás en un proyecto Cronux")
+                linea()
+            
             print()
-            break  # Salir del loop
+            print(f"  {c(Color.GRAY, 'Usa ↑/↓ para navegar, Enter para seleccionar')}")
+            print()
+            
+            for i, (ico, label) in enumerate(opciones):
+                if i == seleccion:
+                    # Opción seleccionada - resaltada
+                    print(f"  {c(Color.CYAN + Color.BOLD, '▶')} {ico}  {c(Color.WHITE + Color.BOLD, label)}")
+                else:
+                    # Opción no seleccionada - gris
+                    print(f"    {c(Color.GRAY, ico)}  {c(Color.GRAY, label)}")
+            
+            print()
+        
+        # Limpiar pantalla y mostrar menú inicial
+        print('\033[2J', end='')  # Limpiar pantalla
+        mostrar_menu()
+        
+        # Loop de navegación
+        while True:
+            key = getch()
+            
+            if key == '\x1b[A':  # Flecha arriba
+                seleccion = max(0, seleccion - 1)
+                mostrar_menu()
+            elif key == '\x1b[B':  # Flecha abajo
+                seleccion = min(len(opciones) - 1, seleccion + 1)
+                mostrar_menu()
+            elif key == '\r' or key == '\n':  # Enter
+                break
+            elif key == '\x1b' or key == '\x03':  # Esc o Ctrl+C
+                print(f"\n  {c(Color.GRAY, '¡Hasta pronto! 👋')}\n")
+                return
 
-        print()
+        print()  # Salto de línea después de seleccionar
 
         # Variable para controlar si debe salir
         debe_salir = False
 
         if en_proyecto:
-            if eleccion == "1":
+            if seleccion == 0:  # Guardar versión
                 _cmd_guardar([])
-            elif eleccion == "2":
+            elif seleccion == 1:  # Ver historial
                 _cmd_historial()
-            elif eleccion == "3":
+            elif seleccion == 2:  # Restaurar versión
                 _cmd_restaurar_interactivo()
-            elif eleccion == "4":
+            elif seleccion == 3:  # Ver información
                 _cmd_info()
-            elif eleccion == "5":
+            elif seleccion == 4:  # Editar nombre
                 _cmd_editar_nombre()
-            elif eleccion == "6":
+            elif seleccion == 5:  # Eliminar versión
                 _cmd_eliminar_version_interactivo()
-            elif eleccion == "7":
+            elif seleccion == 6:  # Eliminar proyecto
                 _cmd_eliminar()
-                # Después de eliminar, salir porque ya no hay proyecto
                 debe_salir = True
-            elif eleccion == "8":
-                debe_salir = True  # Opción "Salir"
+            elif seleccion == 7:  # Salir
+                debe_salir = True
         else:
-            if eleccion == "1":
+            if seleccion == 0:  # Crear nuevo proyecto
                 nombre = input(f"  {c(Color.GRAY, 'Nombre del proyecto:')} ").strip()
                 if nombre:
                     _cmd_crear(nombre, [])
-            elif eleccion == "2":
-                debe_salir = True  # Opción "Salir"
+            elif seleccion == 1:  # Salir
+                debe_salir = True
 
         if debe_salir:
             print(f"  {c(Color.GRAY, '¡Hasta pronto! 👋')}\n")
@@ -254,7 +376,7 @@ def modo_interactivo():
             print()
             break
 
-        # Limpiar pantalla (opcional)
+        # Limpiar pantalla
         os.system('clear' if os.name != 'nt' else 'cls')
 
 
@@ -1019,8 +1141,17 @@ def _cmd_eliminar():
 #  Main
 # ─────────────────────────────────────────────
 def main():
+    # Cargar configuración
+    config = cargar_config()
+    modo = config.get("modo", "asistido")
+    
     if len(sys.argv) < 2:
-        modo_interactivo()
+        # Sin argumentos - verificar modo
+        if modo == "asistido":
+            modo_interactivo()
+        else:
+            # Modo manual - mostrar ayuda
+            mostrar_ayuda()
         return
 
     comando = sys.argv[1].lower()
@@ -1032,6 +1163,9 @@ def main():
 
         elif comando in ["--version", "-v"]:
             print(f"\n  {c(Color.CYAN, 'Cronux-CRX')} v0.2.0  —  Control de Versiones Local\n")
+
+        elif comando in ["modo", "mode"]:
+            cambiar_modo()
 
         elif comando in ["crear", "iniciar", "new", "init"]:
             if not resto:
