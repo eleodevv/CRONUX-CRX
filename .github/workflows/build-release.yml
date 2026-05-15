@@ -358,72 +358,39 @@ jobs:
             --clean `
             cronux_cli/installer_windows_cli.py
 
-      - name: Build GUI with Flet
-        env:
-          FLET_CLI_NO_RICH_OUTPUT: "true"
+      - name: Build GUI with PyInstaller
         run: |
-          # Copiar módulos CLI a la carpeta UI para que Flet los incluya
+          # Copiar módulos CLI a la carpeta UI para que PyInstaller los incluya
           Write-Host "📦 Copiando módulos CLI..."
           New-Item -ItemType Directory -Force -Path "cronux_cli/ui/cli"
           Copy-Item "cronux_cli/cli/*.py" -Destination "cronux_cli/ui/cli/"
           
-          Write-Host "🔨 Building with Flet..."
-          cd cronux_cli/ui
-          flet build windows `
-            --module-name "cronux_ui_v2" `
-            --product "CRONUX-CRX" `
-            --project cronux-crx `
-            --build-version "${{ github.ref_name || github.event.inputs.version }}" `
-            --build-number "${{ github.run_number }}" `
-            --org "dev.cronux" `
-            --bundle-id "dev.cronux.crx" `
-            --description "Sistema de Control de Versiones Local" `
-            --copyright "Copyright © 2024 CRONUX-CRX" `
-            --yes `
-            --no-rich-output
-          cd ../..
-
-      - name: Package as single executable
-        run: |
-          Write-Host "📦 Buscando bundle de Flet..."
-          $buildDir = "cronux_cli/ui/build/windows"
+          Write-Host "🔨 Building GUI with PyInstaller..."
+          python -m PyInstaller `
+            --onefile `
+            --windowed `
+            --name "CRONUX-CRX" `
+            --add-data "cronux_cli/ui/screens;screens" `
+            --add-data "cronux_cli/ui/components;components" `
+            --add-data "cronux_cli/ui/cli;cli" `
+            --add-data "cronux_cli/assets;assets" `
+            --icon "cronux_cli/assets/cronux_icon.ico" `
+            --hidden-import "flet" `
+            --hidden-import "flet.core" `
+            --hidden-import "flet.auth" `
+            --hidden-import "flet.controls" `
+            --collect-all "flet" `
+            --collect-all "flet_core" `
+            --collect-all "flet_runtime" `
+            --clean `
+            cronux_cli/ui/cronux_ui_v2.py
           
-          # Buscar la carpeta del bundle
-          $bundleDir = Get-ChildItem -Path $buildDir -Directory -Recurse | Where-Object { $_.Name -eq "Release" } | Select-Object -First 1
-          
-          if (-not $bundleDir) {
-            $exeFile = Get-ChildItem -Path $buildDir -Filter "*.exe" -Recurse | Select-Object -First 1
-            if ($exeFile) {
-              $bundleDir = $exeFile.Directory
-            }
-          }
-          
-          if (-not $bundleDir) {
-            Write-Host "❌ Bundle not found"
-            exit 1
-          }
-          
-          Write-Host "✅ Bundle found: $($bundleDir.FullName)"
-          
-          # Crear un ZIP del bundle completo como alternativa
-          Write-Host "📦 Creando ZIP del bundle..."
-          New-Item -ItemType Directory -Force -Path "dist"
-          Compress-Archive -Path "$($bundleDir.FullName)/*" -DestinationPath "dist/CRONUX-CRX-Bundle.zip" -Force
-          
-          # Buscar el ejecutable principal
-          $mainExe = Get-ChildItem -Path $bundleDir.FullName -Filter "*.exe" | Where-Object { $_.Name -notlike "*unins*" } | Select-Object -First 1
-          
-          if ($mainExe) {
-            Write-Host "✅ Main executable: $($mainExe.Name)"
-            # Copiar el ejecutable principal a dist
-            Copy-Item $mainExe.FullName -Destination "dist/CRONUX-CRX.exe" -Force
-            
-            $exeSize = (Get-Item "dist/CRONUX-CRX.exe").Length / 1MB
-            $zipSize = (Get-Item "dist/CRONUX-CRX-Bundle.zip").Length / 1MB
-            Write-Host "✅ Executable: $([math]::Round($exeSize, 2)) MB"
-            Write-Host "✅ Bundle ZIP: $([math]::Round($zipSize, 2)) MB"
+          if (Test-Path "dist/CRONUX-CRX.exe") {
+            $size = (Get-Item "dist/CRONUX-CRX.exe").Length / 1MB
+            Write-Host "✅ GUI executable created: $([math]::Round($size, 2)) MB"
           } else {
-            Write-Host "❌ Executable not found"
+            Write-Host "❌ GUI executable not found"
+            Get-ChildItem -Path "dist" -Recurse
             exit 1
           }
           
@@ -439,10 +406,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-packages
-          path: |
-            dist/CRONUX-CLI-INSTALLER.exe
-            dist/CRONUX-CRX.exe
-            dist/CRONUX-CRX-Bundle.zip
+          path: dist/*.exe
 
   # ── Release ────────────────────────────────────────────
   release:
@@ -484,12 +448,9 @@ jobs:
             - `Cronux-CRX-CLI-Installer.pkg` — macOS
 
             **GUI (Interfaz gráfica):**
-            - `CRONUX-CRX.exe` — Windows (ejecutable principal, requiere extraer el ZIP)
-            - `CRONUX-CRX-Bundle.zip` — Windows (bundle completo con dependencias)
+            - `CRONUX-CRX.exe` — Windows (ejecutable portable, un solo archivo)
             - `cronux-crx-gui_*_amd64.deb` — Linux (Debian/Ubuntu)
             - `CRONUX-CRX-*.dmg` — macOS
-            
-            **Nota Windows**: Descarga el ZIP, extráelo y ejecuta CRONUX-CRX.exe desde la carpeta extraída.
 
             ### 🗑️ Desinstalar
 
@@ -504,7 +465,6 @@ jobs:
             ```
           files: |
             artifacts/**/*.exe
-            artifacts/**/*.zip
             artifacts/**/*.deb
             artifacts/**/*.pkg
             artifacts/**/*.dmg
