@@ -331,7 +331,7 @@ def crear_proyecto_ui(nombre, ruta, tipo, callback_progreso=None):
 
 
 def guardar_version_ui(ruta_proyecto, mensaje, callback_progreso=None):
-    """Guarda una versión desde la UI"""
+    """Guarda una versión desde la UI y la marca como actual"""
     import os
     
     # Cambiar al directorio del proyecto
@@ -341,6 +341,37 @@ def guardar_version_ui(ruta_proyecto, mensaje, callback_progreso=None):
     exito = guardar_version_cli(mensaje, callback_progreso)
     
     if exito:
+        # Obtener el número de la nueva versión (la más reciente)
+        carpeta_cronux = Path(ruta_proyecto) / ".cronux"
+        carpeta_versiones = carpeta_cronux / "versiones"
+        
+        if carpeta_versiones.exists():
+            versiones = []
+            for carpeta in carpeta_versiones.iterdir():
+                if carpeta.is_dir() and carpeta.name.startswith("version_"):
+                    try:
+                        num = float(carpeta.name.replace("version_", ""))
+                        versiones.append(num)
+                    except ValueError:
+                        continue
+            
+            if versiones:
+                nueva_version = max(versiones)
+                
+                # Actualizar version_actual en proyecto.json
+                archivo_proyecto = carpeta_cronux / "proyecto.json"
+                if archivo_proyecto.exists():
+                    try:
+                        with open(archivo_proyecto, "r") as f:
+                            datos_proyecto = json.load(f)
+                        
+                        datos_proyecto["version_actual"] = nueva_version
+                        
+                        with open(archivo_proyecto, "w") as f:
+                            json.dump(datos_proyecto, f, indent=2)
+                    except Exception as e:
+                        print(f"[WARN] No se pudo actualizar version_actual: {e}")
+        
         # Leer información actualizada del proyecto
         proyecto_info = leer_info_proyecto(ruta_proyecto)
         return proyecto_info
@@ -732,3 +763,124 @@ def sincronizar_proyectos():
     
     print("=== Sincronización completada ===\n")
     return proyectos_guardados
+
+
+def eliminar_version_ui(ruta_proyecto, numero_version):
+    """
+    Elimina una versión y reorganiza los números de versión.
+    La versión 1 (original) no se puede eliminar.
+    """
+    import shutil
+    
+    try:
+        # Protección: No permitir eliminar la versión 1
+        if numero_version == 1 or numero_version == "1":
+            print("[ERROR] No se puede eliminar la versión original (v1)")
+            return False
+        
+        carpeta_cronux = Path(ruta_proyecto) / ".cronux"
+        carpeta_versiones = carpeta_cronux / "versiones"
+        
+        if not carpeta_versiones.exists():
+            return False
+        
+        # Obtener todas las versiones ordenadas
+        versiones = []
+        for carpeta in sorted(carpeta_versiones.iterdir()):
+            if carpeta.is_dir() and carpeta.name.startswith("version_"):
+                try:
+                    num = carpeta.name.replace("version_", "")
+                    versiones.append((float(num), carpeta))
+                except ValueError:
+                    continue
+        
+        # Buscar la versión a eliminar
+        version_a_eliminar = None
+        indice_eliminar = -1
+        
+        for i, (num, carpeta) in enumerate(versiones):
+            if num == float(numero_version):
+                version_a_eliminar = carpeta
+                indice_eliminar = i
+                break
+        
+        if not version_a_eliminar or not version_a_eliminar.exists():
+            print(f"[ERROR] La versión {numero_version} no existe")
+            return False
+        
+        # Eliminar la carpeta de la versión
+        shutil.rmtree(version_a_eliminar)
+        print(f"[INFO] Versión {numero_version} eliminada")
+        
+        # Reorganizar las versiones posteriores
+        # Las versiones después de la eliminada se renumeran
+        for i in range(indice_eliminar + 1, len(versiones)):
+            num_actual, carpeta_actual = versiones[i]
+            nuevo_numero = num_actual - 0.1  # Decrementar en 0.1
+            
+            # Renombrar la carpeta
+            nuevo_nombre = f"version_{nuevo_numero:.1f}"
+            nueva_ruta = carpeta_versiones / nuevo_nombre
+            carpeta_actual.rename(nueva_ruta)
+            
+            # Actualizar metadatos.json si existe
+            archivo_metadatos = nueva_ruta / "metadatos.json"
+            if archivo_metadatos.exists():
+                try:
+                    with open(archivo_metadatos, "r") as f:
+                        metadatos = json.load(f)
+                    
+                    metadatos["version"] = f"{nuevo_numero:.1f}"
+                    
+                    with open(archivo_metadatos, "w") as f:
+                        json.dump(metadatos, f, indent=2)
+                except Exception as e:
+                    print(f"[WARN] No se pudo actualizar metadatos de {nuevo_nombre}: {e}")
+        
+        # Actualizar version_actual en proyecto.json si es necesario
+        archivo_proyecto = carpeta_cronux / "proyecto.json"
+        if archivo_proyecto.exists():
+            try:
+                with open(archivo_proyecto, "r") as f:
+                    datos_proyecto = json.load(f)
+                
+                version_actual = datos_proyecto.get("version_actual", 1)
+                
+                # Si la versión actual era la eliminada, cambiar a la anterior
+                if float(version_actual) == float(numero_version):
+                    # Buscar la versión anterior más cercana
+                    versiones_restantes = []
+                    for carpeta in sorted(carpeta_versiones.iterdir()):
+                        if carpeta.is_dir() and carpeta.name.startswith("version_"):
+                            try:
+                                num = float(carpeta.name.replace("version_", ""))
+                                versiones_restantes.append(num)
+                            except ValueError:
+                                continue
+                    
+                    if versiones_restantes:
+                        # Usar la versión más reciente
+                        datos_proyecto["version_actual"] = max(versiones_restantes)
+                    else:
+                        datos_proyecto["version_actual"] = 1
+                    
+                    with open(archivo_proyecto, "w") as f:
+                        json.dump(datos_proyecto, f, indent=2)
+                
+                # Si la versión actual era posterior a la eliminada, decrementar
+                elif float(version_actual) > float(numero_version):
+                    datos_proyecto["version_actual"] = float(version_actual) - 0.1
+                    
+                    with open(archivo_proyecto, "w") as f:
+                        json.dump(datos_proyecto, f, indent=2)
+                        
+            except Exception as e:
+                print(f"[WARN] No se pudo actualizar version_actual: {e}")
+        
+        return True
+        
+    except Exception as e:
+        print(f"[ERROR] Error eliminando versión: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
