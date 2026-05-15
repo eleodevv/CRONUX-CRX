@@ -5,7 +5,7 @@
 set -e
 
 REPO="eleodevv/CRONUX-CRX"
-VERSION="v0.2.0"
+VERSION="v0.2.1"
 INSTALL_DIR="/usr/local/cronux"
 BIN_DIR="/usr/local/bin"
 

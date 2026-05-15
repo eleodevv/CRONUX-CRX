@@ -29,6 +29,7 @@ class ProjectScreenV2:
         self._watcher_thread = None  # Thread del file watcher
         self._watcher_running = False  # Flag para controlar el watcher
         self._last_modified = None  # Última modificación del archivo
+        self._last_version_count = 0  # Número de versiones la última vez que se revisó
         
         # Iniciar file watcher
         self._start_file_watcher()
@@ -2010,30 +2011,49 @@ class ProjectScreenV2:
         self.page.update()
     
     def _start_file_watcher(self):
-        """Inicia el file watcher para detectar cambios en proyecto.json"""
+        """Inicia el file watcher para detectar cambios en proyecto.json y versiones"""
         import time
         import json
         from pathlib import Path
         
         def watch_file():
-            """Thread que monitorea cambios en proyecto.json"""
+            """Thread que monitorea cambios en proyecto.json y carpeta de versiones"""
             proyecto_json = Path(self.proyecto.get("ruta", "")) / ".cronux" / "proyecto.json"
+            versiones_dir = Path(self.proyecto.get("ruta", "")) / ".cronux" / "versiones"
+            cronux_dir = Path(self.proyecto.get("ruta", "")) / ".cronux"
             
             if not proyecto_json.exists():
                 return
             
-            # Guardar timestamp inicial
+            # Guardar timestamp inicial y número de versiones
             self._last_modified = proyecto_json.stat().st_mtime
+            self._last_version_count = len(list(versiones_dir.glob("version_*"))) if versiones_dir.exists() else 0
             
             while self._watcher_running:
                 try:
+                    # Verificar si el proyecto fue eliminado
+                    if not cronux_dir.exists():
+                        print(f"[WATCHER] Proyecto eliminado, volviendo al home")
+                        # Volver al home
+                        self._watcher_running = False
+                        self.page.run_task(lambda: self._handle_project_deleted())
+                        break
+                    
                     if proyecto_json.exists():
                         current_mtime = proyecto_json.stat().st_mtime
                         
-                        # Si el archivo cambió
-                        if current_mtime != self._last_modified:
+                        # Contar versiones actuales
+                        current_version_count = len(list(versiones_dir.glob("version_*"))) if versiones_dir.exists() else 0
+                        
+                        # Si el archivo cambió o cambió el número de versiones
+                        if current_mtime != self._last_modified or current_version_count != self._last_version_count:
                             self._last_modified = current_mtime
-                            print(f"[WATCHER] Detectado cambio en proyecto.json")
+                            self._last_version_count = current_version_count
+                            
+                            if current_version_count != self._last_version_count:
+                                print(f"[WATCHER] Detectado cambio en versiones ({self._last_version_count} → {current_version_count})")
+                            else:
+                                print(f"[WATCHER] Detectado cambio en proyecto.json")
                             
                             # Esperar un poco para asegurar que el archivo se escribió completamente
                             time.sleep(0.5)
@@ -2064,6 +2084,15 @@ class ProjectScreenV2:
     def _handle_back(self):
         """Maneja el botón de volver, deteniendo el watcher primero"""
         self._stop_file_watcher()
+        self.on_back()
+    
+    def _handle_project_deleted(self):
+        """Maneja cuando el proyecto es eliminado desde el CLI"""
+        self._stop_file_watcher()
+        self._show_error_snackbar("⚠️  Proyecto eliminado desde CLI")
+        # Volver al home después de un momento
+        import time
+        time.sleep(1)
         self.on_back()
     
     def _reload_project(self):
