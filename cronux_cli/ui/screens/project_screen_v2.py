@@ -1292,7 +1292,7 @@ class ProjectScreenV2:
         )
         
         def guardar():
-            """Guarda la versión"""
+            """Guarda la versión con loader async"""
             mensaje = mensaje_field.value or "Sin descripción"
             dialog.open = False
             self.page.update()
@@ -1419,236 +1419,162 @@ class ProjectScreenV2:
         self.page.update()
     
     def _restore_version(self, version):
-        """Restaura una versión con panel lateral moderno y elegante"""
+        """Restaura una versión con AlertDialog simple y loader async"""
         numero_version = version.get("numero", 1)
         
-        def confirmar():
-            # Cerrar panel inmediatamente
-            panel_overlay.visible = False
+        def confirmar(_):
+            # Cerrar dialog
+            dialog.open = False
             self.page.update()
-            
-            # Pequeña pausa para que se vea que se cerró
-            import time
-            time.sleep(0.1)
             
             # Mostrar loader con timeline async
             self._show_async_progress_dialog("Restaurando versión", "restore", numero_version)
         
-        def cerrar_panel(_=None):
-            # Animación de salida ultra rápida
-            panel_content.opacity = 0
-            backdrop.opacity = 0
-            self.page.update()
-            
-            # Esperar animación y cerrar
-            import time
-            time.sleep(0.1)  # 100ms para coincidir con la animación
-            panel_overlay.visible = False
-            self.page.update()
-        
-        # Backdrop con blur y animación ultra rápida
-        backdrop = ft.Container(
-            bgcolor="#1A202C",
-            opacity=0,  # Inicia transparente
-            expand=True,
-            on_click=cerrar_panel,
-            animate_opacity=100,  # Ultra rápido: 100ms
-        )
-        
-        # Panel lateral moderno y elegante
-        panel_content = ft.Container(
-            content=ft.Column([
-                # Header minimalista
-                ft.Container(
-                    content=ft.Row([
-                        ft.IconButton(
-                            icon=ft.Icons.CLOSE,
-                            icon_color="#A0AEC0",
-                            icon_size=24,
-                            on_click=cerrar_panel,
-                            tooltip="Cerrar",
-                        ),
-                    ], alignment=ft.MainAxisAlignment.END),
-                    padding=ft.Padding(left=32, right=24, top=20, bottom=0),
-                ),
-                
-                # Contenido principal
-                ft.Container(
-                    content=ft.Column([
-                        ft.Container(height=12),
-                        
-                        # Icono grande y moderno
+        # AlertDialog simple como el de guardar
+        dialog = ft.AlertDialog(
+            modal=True,
+            content=ft.Container(
+                content=ft.Column([
+                    # Icono
+                    ft.Container(
+                        content=ft.Icon(ft.Icons.RESTORE_ROUNDED, size=48, color="#FFFFFF"),
+                        width=80,
+                        height=80,
+                        border_radius=40,
+                        bgcolor="#ED8936",
+                        alignment=ft.alignment.Alignment(0, 0),
+                    ),
+                    
+                    ft.Container(height=20),
+                    
+                    # Título
+                    ft.Text(
+                        "Restaurar Versión",
+                        size=24,
+                        weight=ft.FontWeight.BOLD,
+                        color="#1A202C",
+                        text_align=ft.TextAlign.CENTER,
+                    ),
+                    
+                    ft.Container(height=6),
+                    
+                    ft.Text(
+                        "Se reemplazarán los archivos actuales",
+                        size=14,
+                        color="#718096",
+                        text_align=ft.TextAlign.CENTER,
+                    ),
+                    
+                    ft.Container(height=20),
+                    
+                    # Badge de versión
+                    ft.Container(
+                        content=ft.Row([
+                            ft.Icon(ft.Icons.TAG, size=16, color="#667EEA"),
+                            ft.Container(width=8),
+                            ft.Text(
+                                f"v{numero_version}",
+                                size=16,
+                                weight=ft.FontWeight.BOLD,
+                                color="#667EEA",
+                            ),
+                        ], alignment=ft.MainAxisAlignment.CENTER),
+                        padding=ft.Padding.symmetric(horizontal=16, vertical=8),
+                        border_radius=10,
+                        bgcolor="#EDF2F7",
+                    ),
+                    
+                    ft.Container(height=16),
+                    
+                    # Descripción
+                    ft.Container(
+                        content=ft.Column([
+                            ft.Text("Cambios", size=12, color="#718096"),
+                            ft.Container(height=4),
+                            ft.Text(
+                                version.get('descripcion', 'Sin descripción'),
+                                size=14,
+                                color="#1A202C",
+                                weight=ft.FontWeight.W_600,
+                            ),
+                        ]),
+                        padding=ft.Padding.all(12),
+                        border_radius=10,
+                        bgcolor="#F7FAFC",
+                    ),
+                    
+                    ft.Container(height=8),
+                    
+                    # Advertencia
+                    ft.Container(
+                        content=ft.Row([
+                            ft.Icon(ft.Icons.INFO_OUTLINE, size=14, color="#ED8936"),
+                            ft.Container(width=6),
+                            ft.Text(
+                                "Los archivos actuales serán reemplazados",
+                                size=11,
+                                color="#A0AEC0",
+                                italic=True,
+                            ),
+                        ]),
+                        padding=ft.Padding.symmetric(horizontal=10, vertical=6),
+                        border_radius=8,
+                        bgcolor="#FFFAF0",
+                    ),
+                    
+                    ft.Container(height=24),
+                    
+                    # Botones
+                    ft.Row([
                         ft.Container(
-                            content=ft.Icon(ft.Icons.RESTORE_ROUNDED, size=56, color="#ED8936"),
-                            width=100,
-                            height=100,
-                            border_radius=50,
-                            bgcolor="#FFF5F0",
-                            alignment=ft.alignment.Alignment(0, 0),
-                        ),
-                        
-                        ft.Container(height=28),
-                        
-                        # Título grande y bold
-                        ft.Text(
-                            "Restaurar Versión",
-                            size=32,
-                            weight=ft.FontWeight.BOLD,
-                            color="#1A202C",
-                            text_align=ft.TextAlign.CENTER,
-                        ),
-                        
-                        ft.Container(height=16),
-                        
-                        # Badge de versión
-                        ft.Container(
-                            content=ft.Row([
-                                ft.Icon(ft.Icons.TAG, size=20, color="#667EEA"),
-                                ft.Container(width=10),
-                                ft.Text(
-                                    f"v{numero_version}",
-                                    size=22,
-                                    weight=ft.FontWeight.BOLD,
-                                    color="#667EEA",
-                                ),
-                            ], alignment=ft.MainAxisAlignment.CENTER),
-                            padding=ft.Padding.symmetric(horizontal=24, vertical=12),
-                            border_radius=12,
-                            bgcolor="#EDF2F7",
-                        ),
-                        
-                        ft.Container(height=32),
-                        
-                        # Solo descripción
-                        ft.Container(
-                            content=ft.Row([
-                                ft.Container(
-                                    content=ft.Icon(ft.Icons.DESCRIPTION_OUTLINED, size=22, color="#48BB78"),
-                                    width=44,
-                                    height=44,
-                                    border_radius=12,
-                                    bgcolor="#F0FFF4",
+                            content=ft.TextButton(
+                                content=ft.Container(
+                                    content=ft.Text("Cancelar", size=15, weight=ft.FontWeight.W_600, color="#718096"),
+                                    padding=ft.Padding.all(14),
                                     alignment=ft.alignment.Alignment(0, 0),
                                 ),
-                                ft.Container(width=16),
-                                ft.Column([
-                                    ft.Text("Cambios", size=14, color="#718096", weight=ft.FontWeight.W_600),
-                                    ft.Container(height=6),
-                                    ft.Text(
-                                        version.get('descripcion', 'Sin descripción'),
-                                        size=17,
-                                        color="#1A202C",
-                                        weight=ft.FontWeight.BOLD,
-                                        max_lines=3,
-                                        overflow=ft.TextOverflow.ELLIPSIS,
-                                    ),
-                                ], spacing=0, expand=True),
-                            ], alignment=ft.CrossAxisAlignment.START),
-                            padding=ft.Padding.all(18),
-                            border_radius=14,
+                                on_click=lambda _: self._close_dialog(dialog),
+                            ),
+                            expand=1,
+                            border_radius=10,
                             bgcolor="#F7FAFC",
+                            border=ft.Border.all(2, "#E2E8F0"),
                         ),
                         
-                        ft.Container(height=32),
+                        ft.Container(width=10),
                         
-                        # Advertencia moderna
                         ft.Container(
-                            content=ft.Row([
-                                ft.Icon(ft.Icons.INFO_OUTLINE, size=20, color="#ED8936"),
-                                ft.Container(width=12),
-                                ft.Text(
-                                    "Los archivos actuales serán reemplazados",
-                                    size=14,
-                                    weight=ft.FontWeight.W_600,
-                                    color="#744210",
+                            content=ft.ElevatedButton(
+                                content=ft.Container(
+                                    content=ft.Row([
+                                        ft.Icon(ft.Icons.RESTORE, size=18, color="#FFFFFF"),
+                                        ft.Container(width=8),
+                                        ft.Text("Restaurar", size=15, weight=ft.FontWeight.BOLD, color="#FFFFFF"),
+                                    ], alignment=ft.MainAxisAlignment.CENTER),
+                                    padding=ft.Padding.all(14),
                                 ),
-                            ]),
-                            padding=ft.Padding.all(16),
-                            border_radius=12,
-                            bgcolor="#FFFAF0",
-                            border=ft.Border.all(1, "#FED7AA"),
-                        ),
-                        
-                        ft.Container(height=32),
-                        
-                    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                    expand=True,
-                    padding=ft.Padding.symmetric(horizontal=36, vertical=0),
-                ),
-                
-                # Footer con botones modernos
-                ft.Container(
-                    content=ft.Column([
-                        # Botón principal grande
-                        ft.ElevatedButton(
-                            content=ft.Container(
-                                content=ft.Row([
-                                    ft.Icon(ft.Icons.RESTORE, size=20, color="#FFFFFF"),
-                                    ft.Container(width=12),
-                                    ft.Text("Restaurar Versión", size=17, weight=ft.FontWeight.BOLD, color="#FFFFFF"),
-                                ], alignment=ft.MainAxisAlignment.CENTER),
-                                padding=ft.Padding.symmetric(horizontal=0, vertical=16),
-                                alignment=ft.alignment.Alignment(0, 0),
+                                on_click=confirmar,
+                                style=ft.ButtonStyle(
+                                    bgcolor="#ED8936",
+                                    elevation=0,
+                                    shape=ft.RoundedRectangleBorder(radius=10),
+                                ),
                             ),
-                            on_click=lambda _: confirmar(),
-                            style=ft.ButtonStyle(
-                                bgcolor="#ED8936",
-                                elevation=0,
-                                shape=ft.RoundedRectangleBorder(radius=12),
-                            ),
-                            width=float('inf'),
-                        ),
-                        
-                        ft.Container(height=12),
-                        
-                        # Botón secundario
-                        ft.TextButton(
-                            content=ft.Text("Cancelar", size=16, weight=ft.FontWeight.BOLD, color="#718096"),
-                            on_click=cerrar_panel,
-                            style=ft.ButtonStyle(
-                                padding=ft.Padding.symmetric(horizontal=0, vertical=14),
-                            ),
-                            width=float('inf'),
+                            expand=2,
                         ),
                     ]),
-                    padding=ft.Padding(left=36, right=36, top=0, bottom=32),
-                ),
-                
-            ], spacing=0),
-            width=600,  # Más ancho: 600px
-            bgcolor="#FFFFFF",
-            opacity=0,  # Inicia transparente
-            animate_opacity=120,  # Ultra rápido: 120ms
+                    
+                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                padding=ft.Padding.all(28),
+                width=480,
+                border_radius=20,
+                bgcolor="#FFFFFF",
+            ),
         )
         
-        # Overlay con backdrop blur y panel
-        panel_overlay = ft.Container(
-            content=ft.Stack([
-                backdrop,
-                # Panel lateral alineado a la derecha
-                ft.Row([
-                    ft.Container(expand=True),
-                    panel_content,
-                ], spacing=0),
-            ]),
-            expand=True,
-            visible=True,
-        )
-        
-        self.page.overlay.append(panel_overlay)
+        self.page.overlay.append(dialog)
+        dialog.open = True
         self.page.update()
-        
-        # Trigger animación de entrada rápida
-        import threading
-        def animar_entrada():
-            import time
-            time.sleep(0.03)  # Delay más corto
-            backdrop.opacity = 0.4
-            panel_content.opacity = 1.0
-            self.page.update()
-        
-        thread = threading.Thread(target=animar_entrada, daemon=True)
-        thread.start()
     
     def _view_details(self, version):
         """Ver detalles de una versión"""
@@ -1848,66 +1774,178 @@ class ProjectScreenV2:
         self.page.update()
 
     def _show_async_progress_dialog(self, title, operation_type, *args):
-            """Muestra un loader y ejecuta la operación de forma SÍNCRONA (como el original)"""
-            # Ejecutar operación directamente de forma síncrona
-            try:
-                resultado = None
+            """Muestra un loader con timeline y ejecuta la operación con progreso REAL"""
+            # Definir pasos según el tipo de operación
+            if operation_type == "save":
+                steps = [
+                    {"title": "Preparando archivos", "subtitle": "Analizando cambios en el proyecto", "status": "active"},
+                    {"title": "Creando snapshot", "subtitle": "Guardando estado actual", "status": "pending"},
+                    {"title": "Finalizando", "subtitle": "Actualizando historial", "status": "pending"},
+                ]
+            elif operation_type == "restore":
+                steps = [
+                    {"title": "Leyendo versión", "subtitle": "Cargando snapshot guardado", "status": "active"},
+                    {"title": "Restaurando archivos", "subtitle": "Aplicando cambios al proyecto", "status": "pending"},
+                    {"title": "Finalizando", "subtitle": "Actualizando estado", "status": "pending"},
+                ]
+            elif operation_type == "delete":
+                steps = [
+                    {"title": "Eliminando versiones", "subtitle": "Borrando snapshots guardados", "status": "active"},
+                    {"title": "Limpiando archivos", "subtitle": "Removiendo carpeta .cronux", "status": "pending"},
+                    {"title": "Finalizando", "subtitle": "Actualizando lista de proyectos", "status": "pending"},
+                ]
+            elif operation_type == "export":
+                steps = [
+                    {"title": "Preparando archivos", "subtitle": "Recopilando contenido del proyecto", "status": "active"},
+                    {"title": "Comprimiendo", "subtitle": "Creando archivo ZIP", "status": "pending"},
+                    {"title": "Finalizando", "subtitle": "Guardando en destino", "status": "pending"},
+                ]
+            elif operation_type == "delete_version":
+                steps = [
+                    {"title": "Localizando versión", "subtitle": "Buscando snapshot a eliminar", "status": "active"},
+                    {"title": "Eliminando archivos", "subtitle": "Borrando snapshot", "status": "pending"},
+                    {"title": "Finalizando", "subtitle": "Actualizando historial", "status": "pending"},
+                ]
+            else:
+                steps = [
+                    {"title": "Procesando", "subtitle": "Ejecutando operación", "status": "active"},
+                ]
+
+            # Crear loader con timeline
+            loader = LoaderView(self.page, title, steps)
+
+            # Crear dialog
+            progress_dialog = ft.AlertDialog(
+                modal=True,
+                content=ft.Container(
+                    content=loader.build(),
+                    width=600,
+                    height=500,
+                    padding=ft.Padding.all(0),
+                ),
+                shape=ft.RoundedRectangleBorder(radius=20),
+                bgcolor="#F7FAFC",
+            )
+
+            # Mostrar dialog
+            self.page.overlay.append(progress_dialog)
+            progress_dialog.open = True
+            self.page.update()
+
+            # Callback para actualizar progreso en tiempo real
+            def actualizar_progreso(mensaje):
+                """Callback que recibe mensajes de progreso de las funciones CLI"""
+                print(f"[PROGRESS] {mensaje}")
                 
-                if operation_type == "save":
-                    mensaje = args[0] if args else "Versión guardada"
-                    resultado = guardar_version_ui(self.proyecto["ruta"], mensaje, None)
-                elif operation_type == "restore":
-                    numero_version = args[0] if args else 1
-                    resultado = restaurar_version_ui(self.proyecto["ruta"], numero_version)
-                elif operation_type == "delete":
-                    resultado = eliminar_proyecto_ui(self.proyecto["ruta"])
-                elif operation_type == "export":
-                    ruta_destino = args[0] if args else ""
-                    resultado = exportar_proyecto_ui(self.proyecto["ruta"], ruta_destino)
-                elif operation_type == "delete_version":
-                    numero_version = args[0] if args else 1
-                    from cli_integration import eliminar_version_ui
-                    resultado = eliminar_version_ui(self.proyecto["ruta"], numero_version)
-                else:
-                    resultado = True
+                # Actualizar steps según el mensaje
+                if "Preparando" in mensaje or "Analizando" in mensaje:
+                    if len(steps) > 0:
+                        steps[0]["status"] = "active"
+                        steps[0]["subtitle"] = mensaje
+                elif "Copiando" in mensaje or "Guardando" in mensaje or "Restaurando" in mensaje:
+                    if len(steps) > 0:
+                        steps[0]["status"] = "completed"
+                    if len(steps) > 1:
+                        steps[1]["status"] = "active"
+                        steps[1]["subtitle"] = mensaje
+                elif "Finalizando" in mensaje or "Completado" in mensaje:
+                    if len(steps) > 1:
+                        steps[1]["status"] = "completed"
+                    if len(steps) > 2:
+                        steps[2]["status"] = "active"
+                        steps[2]["subtitle"] = mensaje
+                
+                # Actualizar loader
+                try:
+                    loader.update_steps(steps)
+                except Exception as e:
+                    print(f"[ERROR] No se pudo actualizar loader: {e}")
 
-                # Manejar resultado inmediatamente
-                if resultado:
+            # Función async para ejecutar la operación
+            async def ejecutar_operacion_async():
+                import asyncio
+
+                try:
+                    # Paso 1 - inicio
+                    await asyncio.sleep(0.3)
+
+                    # Paso 2 - Operación real con callback de progreso
                     if operation_type == "save":
-                        self.proyecto = resultado
-                        if self.on_refresh:
-                            self.on_refresh(self.proyecto["ruta"])
-                        self.page.controls.clear()
-                        self.page.add(self.build())
-                        self.page.update()
-                        self._show_success_snackbar("✓ Versión guardada exitosamente")
+                        mensaje = args[0] if args else "Versión guardada"
+                        resultado = guardar_version_ui(self.proyecto["ruta"], mensaje, actualizar_progreso)
                     elif operation_type == "restore":
-                        self.proyecto = resultado
-                        if self.on_refresh:
-                            self.on_refresh(self.proyecto["ruta"])
-                        self.page.controls.clear()
-                        self.page.add(self.build())
-                        self.page.update()
-                        self._show_success_snackbar("✓ Versión restaurada exitosamente")
+                        numero_version = args[0] if args else 1
+                        resultado = restaurar_version_ui(self.proyecto["ruta"], numero_version, actualizar_progreso)
                     elif operation_type == "delete":
-                        self._show_success_snackbar("✓ Proyecto eliminado exitosamente")
-                        self.on_back()
+                        resultado = eliminar_proyecto_ui(self.proyecto["ruta"])
                     elif operation_type == "export":
-                        self._show_success_snackbar(f"✓ Proyecto exportado: {Path(resultado).name}")
+                        ruta_destino = args[0] if args else ""
+                        resultado = exportar_proyecto_ui(self.proyecto["ruta"], ruta_destino)
                     elif operation_type == "delete_version":
-                        from cli_integration import leer_info_proyecto
-                        self.proyecto = leer_info_proyecto(self.proyecto["ruta"])
-                        if self.on_refresh:
-                            self.on_refresh(self.proyecto["ruta"])
-                        self.page.controls.clear()
-                        self.page.add(self.build())
-                        self.page.update()
-                        self._show_success_snackbar("✓ Versión eliminada exitosamente")
-                else:
-                    self._show_error_snackbar("❌ Error en la operación")
+                        numero_version = args[0] if args else 1
+                        from cli_integration import eliminar_version_ui
+                        resultado = eliminar_version_ui(self.proyecto["ruta"], numero_version)
+                    else:
+                        resultado = True
 
-            except Exception as e:
-                import traceback
-                error_detail = traceback.format_exc()
-                print(f"Error en operación: {error_detail}")
-                self._show_error_snackbar(f"Error: {str(e)}")
+                    # Marcar todos los pasos como completados
+                    for step in steps:
+                        step["status"] = "completed"
+                    loader.update_steps(steps)
+
+                    # Pequeña pausa para ver el timeline completo
+                    await asyncio.sleep(0.5)
+
+                    # Cerrar dialog
+                    progress_dialog.open = False
+                    self.page.update()
+
+                    # Manejar resultado
+                    if resultado:
+                        if operation_type == "save":
+                            self.proyecto = resultado
+                            if self.on_refresh:
+                                self.on_refresh(self.proyecto["ruta"])
+                            self.page.controls.clear()
+                            self.page.add(self.build())
+                            self.page.update()
+                            await asyncio.sleep(0.2)
+                            self._show_success_snackbar("✓ Versión guardada exitosamente")
+                        elif operation_type == "restore":
+                            self.proyecto = resultado
+                            if self.on_refresh:
+                                self.on_refresh(self.proyecto["ruta"])
+                            self.page.controls.clear()
+                            self.page.add(self.build())
+                            self.page.update()
+                            await asyncio.sleep(0.2)
+                            self._show_success_snackbar("✓ Versión restaurada exitosamente")
+                        elif operation_type == "delete":
+                            self._show_success_snackbar("✓ Proyecto eliminado exitosamente")
+                            await asyncio.sleep(1)
+                            self.on_back()
+                        elif operation_type == "export":
+                            self._show_success_snackbar(f"✓ Proyecto exportado: {Path(resultado).name}")
+                        elif operation_type == "delete_version":
+                            from cli_integration import leer_info_proyecto
+                            self.proyecto = leer_info_proyecto(self.proyecto["ruta"])
+                            if self.on_refresh:
+                                self.on_refresh(self.proyecto["ruta"])
+                            self.page.controls.clear()
+                            self.page.add(self.build())
+                            self.page.update()
+                            await asyncio.sleep(0.2)
+                            self._show_success_snackbar("✓ Versión eliminada exitosamente")
+                    else:
+                        self._show_error_snackbar("❌ Error en la operación")
+
+                except Exception as e:
+                    import traceback
+                    error_detail = traceback.format_exc()
+                    print(f"Error en operación: {error_detail}")
+                    progress_dialog.open = False
+                    self.page.update()
+                    self._show_error_snackbar(f"Error: {str(e)}")
+
+            # Ejecutar con run_task
+            self.page.run_task(ejecutar_operacion_async)
