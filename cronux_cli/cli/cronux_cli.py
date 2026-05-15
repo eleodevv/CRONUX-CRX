@@ -415,15 +415,19 @@ def _cmd_historial():
 
 
 def _cmd_restaurar_interactivo():
-    """Selector interactivo para restaurar una versión"""
+    """Selector interactivo para restaurar una versión con navegación por flechas"""
     if not verificarCronux():
         error("No estás en un proyecto Cronux")
         return
     
     import json
+    import sys
+    import tty
+    import termios
     
     cronux_dir = Path.cwd() / ".cronux"
     versiones_dir = cronux_dir / "versiones"
+    proyecto_json = cronux_dir / "proyecto.json"
     
     if not versiones_dir.exists():
         error("No hay versiones guardadas")
@@ -446,32 +450,83 @@ def _cmd_restaurar_interactivo():
         error("No hay versiones guardadas")
         return
     
+    # Leer versión actual
+    version_actual = 1
+    try:
+        with open(proyecto_json) as f:
+            datos = json.load(f)
+        version_actual = float(datos.get("version_actual", 1))
+    except:
+        pass
+    
     print()
     titulo("Selecciona la versión a restaurar")
+    print(f"  {c(Color.GRAY, 'Usa ↑/↓ para navegar, Enter para seleccionar, Esc para cancelar')}")
     print()
     
-    # Mostrar lista numerada
-    for i, (num, meta) in enumerate(versiones, 1):
-        descripcion = meta.get("mensaje", "Sin descripción")
-        fecha = meta.get("fecha", "")[:10] if meta.get("fecha") else ""
-        print(f"  {c(Color.CYAN, str(i) + '.')} {c(Color.BOLD, f'v{num}')}  {descripcion}  {c(Color.GRAY, fecha)}")
+    seleccion = 0
     
-    print()
+    def getch():
+        """Lee una tecla sin esperar Enter"""
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(fd)
+            ch = sys.stdin.read(1)
+            if ch == '\x1b':  # Secuencia de escape
+                ch2 = sys.stdin.read(1)
+                if ch2 == '[':
+                    ch3 = sys.stdin.read(1)
+                    return f'\x1b[{ch3}'
+            return ch
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
     
-    try:
-        seleccion_input = input(f"  {c(Color.GRAY, f'Selecciona [1-{len(versiones)}] o Enter para cancelar:')} ").strip()
-        if not seleccion_input:
-            info("Operación cancelada")
-            return
+    def mostrar_opciones():
+        """Muestra las opciones con la selección actual resaltada"""
+        # Mover cursor al inicio
+        print('\033[H', end='')
         
-        seleccion = int(seleccion_input) - 1
-        if not (0 <= seleccion < len(versiones)):
-            error("Selección inválida")
-            return
-    except (ValueError, KeyboardInterrupt, EOFError):
+        print(SPLASH)
+        titulo("Selecciona la versión a restaurar")
+        print(f"  {c(Color.GRAY, 'Usa ↑/↓ para navegar, Enter para seleccionar, Esc para cancelar')}")
         print()
-        info("Operación cancelada")
-        return
+        
+        for i, (num, meta) in enumerate(versiones):
+            descripcion = meta.get("mensaje", "Sin descripción")
+            fecha = meta.get("fecha", "")[:10] if meta.get("fecha") else ""
+            es_actual = (num == version_actual)
+            
+            if i == seleccion:
+                # Opción seleccionada - resaltada en cyan
+                badge_actual = f" {c(Color.GREEN, '[ACTUAL]')}" if es_actual else ""
+                print(f"  {c(Color.CYAN + Color.BOLD, '▶')} {c(Color.CYAN + Color.BOLD, f'v{num}')}{badge_actual}  {c(Color.WHITE, descripcion)}  {c(Color.GRAY, fecha)}")
+            else:
+                # Opción no seleccionada - gris
+                badge_actual = f" {c(Color.DIM, '[ACTUAL]')}" if es_actual else ""
+                print(f"    {c(Color.GRAY, f'v{num}')}{badge_actual}  {c(Color.GRAY, descripcion)}  {c(Color.DIM, fecha)}")
+        
+        print()
+    
+    # Limpiar pantalla y mostrar opciones iniciales
+    print('\033[2J', end='')  # Limpiar pantalla
+    mostrar_opciones()
+    
+    # Loop de navegación
+    while True:
+        key = getch()
+        
+        if key == '\x1b[A':  # Flecha arriba
+            seleccion = max(0, seleccion - 1)
+            mostrar_opciones()
+        elif key == '\x1b[B':  # Flecha abajo
+            seleccion = min(len(versiones) - 1, seleccion + 1)
+            mostrar_opciones()
+        elif key == '\r' or key == '\n':  # Enter
+            break
+        elif key == '\x1b' or key == '\x03':  # Esc o Ctrl+C
+            print(f"\n  {c(Color.GRAY, 'Operación cancelada')}\n")
+            return
     
     # Versión seleccionada
     numero_version, meta = versiones[seleccion]
@@ -636,16 +691,20 @@ def _cmd_info():
 
 
 def _cmd_eliminar_version_interactivo():
-    """Selector interactivo para eliminar una versión"""
+    """Selector interactivo para eliminar una versión con navegación por flechas"""
     if not verificarCronux():
         error("No estás en un proyecto Cronux")
         return
     
     import json
     import shutil
+    import sys
+    import tty
+    import termios
     
     cronux_dir = Path.cwd() / ".cronux"
     versiones_dir = cronux_dir / "versiones"
+    proyecto_json = cronux_dir / "proyecto.json"
     
     if not versiones_dir.exists():
         error("No hay versiones guardadas")
@@ -669,38 +728,91 @@ def _cmd_eliminar_version_interactivo():
         error("No hay versiones disponibles para eliminar (la v1 no se puede eliminar)")
         return
     
+    # Leer versión actual
+    version_actual = 1
+    try:
+        with open(proyecto_json) as f:
+            datos = json.load(f)
+        version_actual = float(datos.get("version_actual", 1))
+    except:
+        pass
+    
     print()
     titulo("Selecciona la versión a eliminar")
+    print(f"  {c(Color.GRAY, 'Usa ↑/↓ para navegar, Enter para seleccionar, Esc para cancelar')}")
     print()
     
-    # Mostrar lista numerada
-    for i, (num, meta) in enumerate(versiones, 1):
-        descripcion = meta.get("mensaje", "Sin descripción")
-        fecha = meta.get("fecha", "")[:10] if meta.get("fecha") else ""
-        print(f"  {c(Color.CYAN, str(i) + '.')} {c(Color.BOLD, f'v{num}')}  {descripcion}  {c(Color.GRAY, fecha)}")
+    seleccion = 0
     
-    print()
+    def getch():
+        """Lee una tecla sin esperar Enter"""
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(fd)
+            ch = sys.stdin.read(1)
+            if ch == '\x1b':  # Secuencia de escape
+                ch2 = sys.stdin.read(1)
+                if ch2 == '[':
+                    ch3 = sys.stdin.read(1)
+                    return f'\x1b[{ch3}'
+            return ch
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
     
-    try:
-        seleccion_input = input(f"  {c(Color.GRAY, f'Selecciona [1-{len(versiones)}] o Enter para cancelar:')} ").strip()
-        if not seleccion_input:
-            info("Operación cancelada")
-            return
+    def mostrar_opciones():
+        """Muestra las opciones con la selección actual resaltada"""
+        # Mover cursor al inicio
+        print('\033[H', end='')
         
-        seleccion = int(seleccion_input) - 1
-        if not (0 <= seleccion < len(versiones)):
-            error("Selección inválida")
-            return
-    except (ValueError, KeyboardInterrupt, EOFError):
+        print(SPLASH)
+        titulo("Selecciona la versión a eliminar")
+        print(f"  {c(Color.GRAY, 'Usa ↑/↓ para navegar, Enter para seleccionar, Esc para cancelar')}")
         print()
-        info("Operación cancelada")
-        return
+        
+        for i, (num, meta) in enumerate(versiones):
+            descripcion = meta.get("mensaje", "Sin descripción")
+            fecha = meta.get("fecha", "")[:10] if meta.get("fecha") else ""
+            es_actual = (num == version_actual)
+            
+            if i == seleccion:
+                # Opción seleccionada - resaltada en cyan
+                badge_actual = f" {c(Color.RED, '[ACTUAL]')}" if es_actual else ""
+                print(f"  {c(Color.CYAN + Color.BOLD, '▶')} {c(Color.CYAN + Color.BOLD, f'v{num}')}{badge_actual}  {c(Color.WHITE, descripcion)}  {c(Color.GRAY, fecha)}")
+            else:
+                # Opción no seleccionada - gris
+                badge_actual = f" {c(Color.DIM, '[ACTUAL]')}" if es_actual else ""
+                print(f"    {c(Color.GRAY, f'v{num}')}{badge_actual}  {c(Color.GRAY, descripcion)}  {c(Color.DIM, fecha)}")
+        
+        print()
+    
+    # Limpiar pantalla y mostrar opciones iniciales
+    print('\033[2J', end='')  # Limpiar pantalla
+    mostrar_opciones()
+    
+    # Loop de navegación
+    while True:
+        key = getch()
+        
+        if key == '\x1b[A':  # Flecha arriba
+            seleccion = max(0, seleccion - 1)
+            mostrar_opciones()
+        elif key == '\x1b[B':  # Flecha abajo
+            seleccion = min(len(versiones) - 1, seleccion + 1)
+            mostrar_opciones()
+        elif key == '\r' or key == '\n':  # Enter
+            break
+        elif key == '\x1b' or key == '\x03':  # Esc o Ctrl+C
+            print(f"\n  {c(Color.GRAY, 'Operación cancelada')}\n")
+            return
     
     # Versión seleccionada
     numero_version, meta = versiones[seleccion]
     
     print()
     warn(f"Esto eliminará la versión {c(Color.BOLD, f'v{numero_version}')}")
+    if numero_version == version_actual:
+        warn(f"Esta es la versión {c(Color.RED, 'ACTUAL')} - se restaurará automáticamente la versión anterior")
     warn("Las versiones posteriores se renumerarán automáticamente")
     print()
     
@@ -713,6 +825,20 @@ def _cmd_eliminar_version_interactivo():
     if confirmar != 's':
         info("Operación cancelada")
         return
+    
+    # Si se elimina la versión actual, restaurar la anterior
+    debe_restaurar = (numero_version == version_actual)
+    version_a_restaurar = None
+    
+    if debe_restaurar:
+        # Buscar la versión anterior
+        versiones_disponibles = sorted([float(v_dir.name.replace("version_", "")) 
+                                       for v_dir in versiones_dir.glob("version_*")
+                                       if float(v_dir.name.replace("version_", "")) != numero_version])
+        if versiones_disponibles:
+            version_a_restaurar = versiones_disponibles[-1]  # La más reciente que no sea la actual
+        else:
+            version_a_restaurar = 1  # Fallback a v1
     
     # Eliminar versión
     try:
@@ -747,6 +873,24 @@ def _cmd_eliminar_version_interactivo():
         print()
         ok(f"Versión {c(Color.BOLD, f'v{numero_version}')} eliminada")
         info("Las versiones posteriores han sido renumeradas")
+        
+        # Restaurar versión anterior si era la actual
+        if debe_restaurar and version_a_restaurar:
+            print()
+            info(f"Restaurando versión {c(Color.CYAN, f'v{version_a_restaurar}')}...")
+            print()
+            
+            def progreso(msg):
+                print(f"  {c(Color.GRAY, '→')} {msg}")
+            
+            exito = restaurar_version_cli(str(version_a_restaurar), auto_instalar=True, callback_progreso=progreso)
+            
+            if exito:
+                print()
+                ok(f"Versión {c(Color.CYAN, f'v{version_a_restaurar}')} restaurada como actual")
+            else:
+                error("No se pudo restaurar la versión anterior")
+        
     except Exception as e:
         error(f"Error al eliminar versión: {e}")
     print()

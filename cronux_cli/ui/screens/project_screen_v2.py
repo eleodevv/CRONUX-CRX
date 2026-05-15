@@ -243,22 +243,30 @@ class ProjectScreenV2:
     def _build_modern_version_card(self, version, version_actual):
         """Card moderna para cada versión - más grande y completamente clickable"""
         numero_version = version.get('numero', 1)
-        is_current = numero_version == version_actual
         
-        # Obtener el número más alto de versión (convertir a int para comparar)
+        # Convertir ambos a float para comparar correctamente
+        try:
+            num_v = float(numero_version)
+        except (ValueError, TypeError):
+            num_v = 1.0
+        
+        try:
+            ver_actual = float(version_actual)
+        except (ValueError, TypeError):
+            ver_actual = 1.0
+        
+        is_current = num_v == ver_actual
+        
+        # Obtener el número más alto de versión (convertir a float para comparar)
         versiones_numeros = []
         for v in self.proyecto.get("versiones", []):
             try:
-                versiones_numeros.append(int(v.get('numero', 0)))
+                versiones_numeros.append(float(v.get('numero', 0)))
             except (ValueError, TypeError):
-                versiones_numeros.append(0)
+                versiones_numeros.append(0.0)
         
-        max_version = max(versiones_numeros) if versiones_numeros else 1
-        
-        try:
-            is_latest = int(numero_version) == max_version
-        except (ValueError, TypeError):
-            is_latest = False
+        max_version = max(versiones_numeros) if versiones_numeros else 1.0
+        is_latest = num_v == max_version
         
         return ft.Container(
             content=ft.Column([
@@ -458,7 +466,19 @@ class ProjectScreenV2:
         
         # Detectar versión actual del proyecto (la que está actualmente en uso)
         version_actual_proyecto = self.proyecto.get('version_actual', 1)
-        is_current = numero_version == version_actual_proyecto
+        
+        # Convertir ambos a float para comparar correctamente
+        try:
+            num_v = float(numero_version)
+        except (ValueError, TypeError):
+            num_v = 1.0
+        
+        try:
+            ver_actual = float(version_actual_proyecto)
+        except (ValueError, TypeError):
+            ver_actual = 1.0
+        
+        is_current = num_v == ver_actual
         
         # Color del nodo: rojo si es actual, azul si es la última, gris si es antigua
         node_color = "#F56565" if is_current else "#667EEA" if is_latest else "#CBD5E0"
@@ -1364,7 +1384,8 @@ class ProjectScreenV2:
         # Calcular próximo número de versión
         versiones = self.proyecto.get("versiones", [])
         if versiones:
-            ultima_version = max([v.get("numero", 1) for v in versiones])
+            # Convertir a float para evitar errores de comparación
+            ultima_version = max([float(v.get("numero", 1)) for v in versiones])
             proxima_version = ultima_version + 0.1
         else:
             proxima_version = 1.1
