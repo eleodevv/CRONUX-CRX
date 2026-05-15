@@ -186,6 +186,7 @@ def modo_interactivo():
                 ("📜", "Ver historial"),
                 ("⏮️ ", "Restaurar versión"),
                 ("ℹ️ ", "Ver información"),
+                ("🗑️ ", "Eliminar versión"),
                 ("🗑️ ", "Eliminar proyecto"),
                 ("🚪", "Salir"),
             ]
@@ -224,10 +225,14 @@ def modo_interactivo():
             elif eleccion == "4":
                 _cmd_info()
             elif eleccion == "5":
+                version = input(f"  {c(Color.GRAY, 'Número de versión a eliminar:')} ").strip()
+                if version:
+                    _cmd_eliminar_version(version)
+            elif eleccion == "6":
                 _cmd_eliminar()
                 # Después de eliminar, salir porque ya no hay proyecto
                 debe_salir = True
-            elif eleccion == "6":
+            elif eleccion == "7":
                 debe_salir = True  # Opción "Salir"
         else:
             if eleccion == "1":
