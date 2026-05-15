@@ -485,22 +485,34 @@ def eliminar_proyecto_ui(ruta_proyecto):
     ruta = Path(ruta_proyecto)
     carpeta_cronux = ruta / ".cronux"
     
-    if carpeta_cronux.exists():
-        try:
-            # Eliminar carpeta .cronux
-            shutil.rmtree(carpeta_cronux)
-            
-            # Eliminar de la lista guardada
-            proyectos = cargar_lista_proyectos()
-            proyectos = [p for p in proyectos if p["ruta"] != str(ruta)]
-            guardar_lista_proyectos(proyectos)
-            
-            return True
-        except Exception as e:
-            print(f"Error eliminando proyecto: {e}")
-            return False
+    if not carpeta_cronux.exists():
+        print(f"[WARN] Carpeta .cronux no existe en {ruta}")
+        # Aún así, eliminar de la lista
+        proyectos = cargar_lista_proyectos()
+        proyectos = [p for p in proyectos if p["ruta"] != str(ruta)]
+        guardar_lista_proyectos(proyectos)
+        return True
     
-    return False
+    try:
+        # Eliminar carpeta .cronux
+        print(f"[DELETE] Eliminando {carpeta_cronux}")
+        shutil.rmtree(carpeta_cronux)
+        print(f"[DELETE] ✓ Carpeta .cronux eliminada")
+        
+        # Eliminar de la lista guardada
+        proyectos = cargar_lista_proyectos()
+        proyectos_antes = len(proyectos)
+        proyectos = [p for p in proyectos if p["ruta"] != str(ruta)]
+        proyectos_despues = len(proyectos)
+        guardar_lista_proyectos(proyectos)
+        print(f"[DELETE] ✓ Eliminado de la lista ({proyectos_antes} -> {proyectos_despues})")
+        
+        return True
+    except Exception as e:
+        print(f"[ERROR] Error eliminando proyecto: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 
 
 def abrir_carpeta_proyecto(ruta_proyecto):

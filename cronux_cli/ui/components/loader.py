@@ -144,17 +144,21 @@ class LoaderView:
         self.steps = steps
         # Reconstruir el timeline
         try:
+            # Verificar que el contenedor y sus controles existan
+            if not self.container or not hasattr(self.container, 'content'):
+                return
+            
+            if not self.container.content or not hasattr(self.container.content, 'controls'):
+                return
+            
+            # Navegar a la columna del timeline
             timeline_column = self.container.content.controls[2].content.controls[1].content
             if timeline_column and hasattr(timeline_column, 'controls'):
                 timeline_column.controls = [self._build_step(step, i) for i, step in enumerate(self.steps)]
                 self.page.update()
         except (AttributeError, IndexError, TypeError) as e:
-            print(f"[DEBUG] Error actualizando timeline: {e}")
-            # Si falla, intentar reconstruir todo el contenedor
-            try:
-                self.page.update()
-            except:
-                pass
+            # Silenciosamente ignorar errores si el diálogo ya se cerró
+            pass
     
     def build(self):
         """Retorna el contenedor para ser mostrado"""
