@@ -168,6 +168,103 @@ def cargar_lista_proyectos():
         return []
 
 
+def escanear_proyectos_sistema():
+    """
+    Escanea directorios comunes buscando proyectos Cronux (.cronux folder)
+    y los agrega a la lista si no están ya
+    """
+    import os
+    from pathlib import Path
+    
+    # Directorios comunes donde buscar proyectos (solo nivel 1 y 2)
+    directorios_busqueda = [
+        Path.home() / "Documentos",
+        Path.home() / "Documents", 
+        Path.home() / "Desktop",
+        Path.home() / "Escritorio",
+    ]
+    
+    proyectos_encontrados = []
+    rutas_vistas = set()
+    
+    print("[SCAN] Escaneando sistema en busca de proyectos Cronux...")
+    
+    for directorio_base in directorios_busqueda:
+        if not directorio_base.exists():
+            continue
+        
+        try:
+            # Buscar carpetas .cronux (máximo 2 niveles de profundidad)
+            for root, dirs, files in os.walk(directorio_base):
+                # Limitar profundidad a 2 niveles
+                depth = root[len(str(directorio_base)):].count(os.sep)
+                if depth >= 2:
+                    dirs[:] = []  # No seguir bajando
+                    continue
+                
+                # Ignorar carpetas ocultas y del sistema
+                dirs[:] = [d for d in dirs if not d.startswith('.') and d not in ['node_modules', 'venv', '__pycache__', 'build', 'dist']]
+                
+                if ".cronux" in dirs:
+                    ruta_proyecto = Path(root)
+                    ruta_str = str(ruta_proyecto)
+                    
+                    # Evitar duplicados
+                    if ruta_str not in rutas_vistas:
+                        rutas_vistas.add(ruta_str)
+                        proyecto_info = leer_info_proyecto(ruta_str)
+                        if proyecto_info:
+                            proyectos_encontrados.append(proyecto_info)
+                            print(f"[SCAN] ✓ Encontrado: {proyecto_info['nombre']} en {ruta_str}")
+                    
+                    # No buscar dentro de proyectos Cronux
+                    dirs.remove(".cronux")
+        except (PermissionError, OSError) as e:
+            # Ignorar errores de permisos
+            continue
+    
+    print(f"[SCAN] Escaneo completo. Encontrados {len(proyectos_encontrados)} proyectos")
+    return proyectos_encontrados
+
+
+def sincronizar_proyectos():
+    """
+    Sincroniza la lista de proyectos guardada con los proyectos encontrados en el sistema.
+    Agrega nuevos proyectos encontrados y elimina los que ya no existen.
+    """
+    # Cargar lista actual
+    proyectos_guardados = cargar_lista_proyectos()
+    rutas_guardadas = {p["ruta"] for p in proyectos_guardados}
+    
+    # Escanear sistema
+    proyectos_escaneados = escanear_proyectos_sistema()
+    rutas_escaneadas = {p["ruta"] for p in proyectos_escaneados}
+    
+    # Combinar: mantener guardados que existen + agregar nuevos escaneados
+    proyectos_finales = []
+    rutas_finales = set()
+    
+    # Primero agregar los guardados que aún existen
+    for p in proyectos_guardados:
+        ruta = p["ruta"]
+        if Path(ruta).exists() and (Path(ruta) / ".cronux").exists():
+            proyectos_finales.append(p)
+            rutas_finales.add(ruta)
+    
+    # Luego agregar los nuevos encontrados
+    for p in proyectos_escaneados:
+        if p["ruta"] not in rutas_finales:
+            proyectos_finales.append(p)
+            rutas_finales.add(p["ruta"])
+    
+    # Guardar lista actualizada
+    if len(proyectos_finales) != len(proyectos_guardados):
+        print(f"[SYNC] Sincronizados {len(proyectos_finales)} proyectos (antes: {len(proyectos_guardados)})")
+        guardar_lista_proyectos(proyectos_finales)
+    
+    return proyectos_finales
+
+
 def agregar_proyecto_a_lista(ruta_proyecto):
     """Agrega un proyecto a la lista guardada"""
     proyectos = cargar_lista_proyectos()

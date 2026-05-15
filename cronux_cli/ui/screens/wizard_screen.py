@@ -1220,7 +1220,7 @@ class WizardScreen:
                                     ft.Container(expand=True),
                                     ft.Icon(ft.Icons.ARROW_FORWARD, size=18),
                                 ], alignment=ft.MainAxisAlignment.CENTER),
-                                on_click=lambda _: self._continue() if self.project_name and self.project_path else None,
+                                on_click=lambda _: self._continue(),
                                 style=ft.ButtonStyle(
                                     bgcolor=color,
                                     color="#FFFFFF",
@@ -1411,8 +1411,29 @@ class WizardScreen:
     
     def _continue(self):
         """Continuar - Llama directamente a finish para crear el proyecto"""
-        # En lugar de mostrar la pantalla de éxito, crear el proyecto directamente
+        # Validar que el nombre no esté vacío
+        if not self.project_name or not self.project_name.strip():
+            self._show_error_snackbar("❌ Por favor ingresa un nombre para el proyecto")
+            return
+        
+        # Validar que se haya seleccionado una carpeta
+        if not self.project_path:
+            self._show_error_snackbar("❌ Por favor selecciona una carpeta para el proyecto")
+            return
+        
+        # Todo válido, crear el proyecto
         self._finish()
+    
+    def _show_error_snackbar(self, mensaje):
+        """Muestra un snackbar de error"""
+        snackbar = ft.SnackBar(
+            content=ft.Text(mensaje, color="#FFFFFF"),
+            bgcolor="#F56565",
+            duration=3000,
+        )
+        self.page.overlay.append(snackbar)
+        snackbar.open = True
+        self.page.update()
     
     def _select_folder(self):
         """Seleccionar carpeta"""

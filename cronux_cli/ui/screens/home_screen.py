@@ -43,9 +43,26 @@ class HomeScreen:
                         
                         # Botones de acción
                         ft.Row([
+                            # Botón Refrescar/Sincronizar
+                            ft.Container(
+                                content=ft.Row([
+                                    ft.Icon(ft.Icons.REFRESH, size=16, color="#667EEA"),
+                                    ft.Container(width=4),
+                                    ft.Text("Sincronizar", size=13, color="#667EEA", weight=ft.FontWeight.W_600),
+                                ], spacing=0),
+                                padding=ft.Padding.symmetric(horizontal=14, vertical=10),
+                                border_radius=8,
+                                border=ft.border.all(1.5, "#667EEA"),
+                                on_click=lambda _: self._sincronizar_proyectos(),
+                                tooltip="Busca proyectos nuevos creados desde CLI",
+                                ink=True,
+                            ),
+                            
+                            ft.Container(width=8),
+                            
                             # Botón Limpiar proyectos deprecados
                             ft.Container(
-                                content=ft.Text("Limpiar proyectos deprecados", size=13, color="#718096", weight=ft.FontWeight.W_600),
+                                content=ft.Text("Limpiar", size=13, color="#718096", weight=ft.FontWeight.W_600),
                                 padding=ft.Padding.symmetric(horizontal=16, vertical=10),
                                 border_radius=8,
                                 bgcolor="#F7FAFC",
@@ -562,6 +579,17 @@ class HomeScreen:
         snackbar.open = True
         self.page.update()
     
+    def _show_info_snackbar(self, mensaje):
+        """Muestra un snackbar informativo"""
+        snackbar = ft.SnackBar(
+            content=ft.Text(mensaje, color="#FFFFFF"),
+            bgcolor="#667EEA",
+            duration=2000,  # 2 segundos
+        )
+        self.page.overlay.append(snackbar)
+        snackbar.open = True
+        self.page.update()
+    
     def _editar_nombre_proyecto(self, proyecto):
         """Edita el nombre del proyecto"""
         nombre_field = ft.TextField(
@@ -739,6 +767,29 @@ class HomeScreen:
             self._show_success_snackbar(f"✓ {proyectos_nuevos} proyecto{'s' if proyectos_nuevos != 1 else ''} nuevo{'s' if proyectos_nuevos != 1 else ''} encontrado{'s' if proyectos_nuevos != 1 else ''}")
         else:
             self._show_success_snackbar("✓ Lista actualizada, sin cambios")
+    
+    def _sincronizar_proyectos(self):
+        """Sincroniza proyectos entre CLI y UI escaneando el sistema"""
+        from cli_integration import sincronizar_proyectos
+        
+        # Mostrar mensaje de carga
+        self._show_info_snackbar("🔄 Escaneando sistema...")
+        
+        # Sincronizar en segundo plano
+        import threading
+        def sync_thread():
+            proyectos_sincronizados = sincronizar_proyectos()
+            
+            # Actualizar UI en el hilo principal
+            self.proyectos = proyectos_sincronizados
+            self.page.controls.clear()
+            self.page.add(self.build())
+            self.page.update()
+            
+            # Mostrar resultado
+            self._show_success_snackbar(f"✓ Sincronizado: {len(proyectos_sincronizados)} proyectos")
+        
+        threading.Thread(target=sync_thread, daemon=True).start()
     
     def _auto_limpiar_proyectos_deprecados(self):
         """Limpia automáticamente proyectos deprecados al cargar (sin mostrar mensaje)"""
