@@ -1035,20 +1035,36 @@ def _cmd_eliminar_version_interactivo():
             except:
                 continue
         
-        # Renumerar de mayor a menor para evitar conflictos
-        for num_viejo, v_dir in reversed(versiones_posteriores):
-            num_nuevo = num_viejo - 1
-            nuevo_nombre = versiones_dir / f"version_{num_nuevo}"
-            v_dir.rename(nuevo_nombre)
+        # Renumerar usando directorio temporal para evitar conflictos
+        import tempfile
+        temp_dir = Path(tempfile.mkdtemp())
+        
+        try:
+            # Mover a temporal
+            temp_mapping = []
+            for num_viejo, v_dir in versiones_posteriores:
+                temp_path = temp_dir / f"version_{num_viejo}"
+                shutil.move(str(v_dir), str(temp_path))
+                temp_mapping.append((num_viejo, temp_path))
             
-            # Actualizar metadata
-            meta_file = nuevo_nombre / "metadatos.json"
-            if meta_file.exists():
-                with open(meta_file) as f:
-                    meta = json.load(f)
-                meta["version"] = num_nuevo
-                with open(meta_file, "w") as f:
-                    json.dump(meta, f, indent=2)
+            # Mover de temporal a destino con nuevo número
+            for num_viejo, temp_path in temp_mapping:
+                num_nuevo = num_viejo - 1
+                nuevo_nombre = versiones_dir / f"version_{num_nuevo}"
+                shutil.move(str(temp_path), str(nuevo_nombre))
+                
+                # Actualizar metadata
+                meta_file = nuevo_nombre / "metadatos.json"
+                if meta_file.exists():
+                    with open(meta_file) as f:
+                        meta = json.load(f)
+                    meta["version"] = num_nuevo
+                    with open(meta_file, "w") as f:
+                        json.dump(meta, f, indent=2)
+        finally:
+            # Limpiar directorio temporal
+            if temp_dir.exists():
+                shutil.rmtree(temp_dir)
         
         print()
         ok(f"Versión {c(Color.BOLD, f'v{numero_version}')} eliminada")
@@ -1132,20 +1148,36 @@ def _cmd_eliminar_version(numero_version_str):
             except:
                 continue
         
-        # Renumerar de mayor a menor para evitar conflictos
-        for num_viejo, v_dir in reversed(versiones_posteriores):
-            num_nuevo = num_viejo - 1
-            nuevo_nombre = versiones_dir / f"version_{num_nuevo}"
-            v_dir.rename(nuevo_nombre)
+        # Renumerar usando directorio temporal para evitar conflictos
+        import tempfile
+        temp_dir = Path(tempfile.mkdtemp())
+        
+        try:
+            # Mover a temporal
+            temp_mapping = []
+            for num_viejo, v_dir in versiones_posteriores:
+                temp_path = temp_dir / f"version_{num_viejo}"
+                shutil.move(str(v_dir), str(temp_path))
+                temp_mapping.append((num_viejo, temp_path))
             
-            # Actualizar metadata
-            meta_file = nuevo_nombre / "metadatos.json"
-            if meta_file.exists():
-                with open(meta_file) as f:
-                    meta = json.load(f)
-                meta["version"] = num_nuevo
-                with open(meta_file, "w") as f:
-                    json.dump(meta, f, indent=2)
+            # Mover de temporal a destino con nuevo número
+            for num_viejo, temp_path in temp_mapping:
+                num_nuevo = num_viejo - 1
+                nuevo_nombre = versiones_dir / f"version_{num_nuevo}"
+                shutil.move(str(temp_path), str(nuevo_nombre))
+                
+                # Actualizar metadata
+                meta_file = nuevo_nombre / "metadatos.json"
+                if meta_file.exists():
+                    with open(meta_file) as f:
+                        meta = json.load(f)
+                    meta["version"] = num_nuevo
+                    with open(meta_file, "w") as f:
+                        json.dump(meta, f, indent=2)
+        finally:
+            # Limpiar directorio temporal
+            if temp_dir.exists():
+                shutil.rmtree(temp_dir)
         
         print()
         ok(f"Versión {c(Color.BOLD, f'v{numero_version}')} eliminada")

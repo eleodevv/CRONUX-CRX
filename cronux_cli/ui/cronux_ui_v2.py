@@ -97,7 +97,7 @@ class CronuxUIv2:
                     guardar_lista_proyectos(self.proyectos)
                     
                     return proyecto_actualizado
-        return Noneaun
+        return None
 
     def _create_project(self, nombre, ruta, tipo, create_initial_version=True):
         """Crea un nuevo proyecto con loader de progreso en tiempo real"""
