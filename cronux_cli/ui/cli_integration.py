@@ -350,7 +350,9 @@ def guardar_version_ui(ruta_proyecto, mensaje, callback_progreso=None):
             for carpeta in carpeta_versiones.iterdir():
                 if carpeta.is_dir() and carpeta.name.startswith("version_"):
                     try:
-                        num = float(carpeta.name.replace("version_", ""))
+                        num_str = carpeta.name.replace("version_", "")
+                        # Convertir a int (formato nuevo)
+                        num = int(float(num_str))
                         versiones.append(num)
                     except ValueError:
                         continue
@@ -386,6 +388,12 @@ def restaurar_version_ui(ruta_proyecto, numero_version, callback_progreso=None):
     # Cambiar al directorio del proyecto
     os.chdir(ruta_proyecto)
     
+    # Convertir numero_version a int si es necesario
+    try:
+        numero_version = int(float(numero_version))
+    except (ValueError, TypeError):
+        pass
+    
     # Crear callback que imprime en consola si no se proporciona uno
     def progress_callback(msg):
         if callback_progreso and callable(callback_progreso):
@@ -406,7 +414,7 @@ def restaurar_version_ui(ruta_proyecto, numero_version, callback_progreso=None):
                 with open(archivo_proyecto, "r") as f:
                     datos_proyecto = json.load(f)
                 
-                # Actualizar versión actual
+                # Actualizar versión actual (como entero)
                 datos_proyecto["version_actual"] = numero_version
                 
                 with open(archivo_proyecto, "w") as f:
@@ -490,8 +498,16 @@ def leer_info_proyecto(ruta_proyecto):
                     except:
                         fecha_relativa = metadatos["fecha"]
                     
+                    # Convertir versión a entero (formato nuevo)
+                    numero_version = metadatos["version"]
+                    try:
+                        # Si es float, convertir a int
+                        numero_version = int(float(numero_version))
+                    except (ValueError, TypeError):
+                        numero_version = metadatos["version"]
+                    
                     versiones.append({
-                        "numero": metadatos["version"],
+                        "numero": numero_version,
                         "fecha": fecha_relativa,
                         "fecha_completa": metadatos["fecha"],
                         "descripcion": metadatos.get("mensaje", "Sin descripción"),
@@ -523,6 +539,11 @@ def leer_info_proyecto(ruta_proyecto):
     
     # Leer versión actual del proyecto (la que está en uso)
     version_actual = datos_proyecto.get("version_actual", 1)  # Por defecto v1
+    try:
+        # Convertir a entero (formato nuevo)
+        version_actual = int(float(version_actual))
+    except (ValueError, TypeError):
+        version_actual = 1
     
     return {
         "nombre": datos_proyecto["nombre"],

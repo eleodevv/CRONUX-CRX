@@ -38,7 +38,7 @@ def cargar_config():
     # Configuración por defecto
     config_default = {
         "modo": "asistido",  # asistido o manual
-        "version": "0.2.0"
+        "version": "0.2.1"
     }
     
     if CONFIG_FILE.exists():
@@ -114,7 +114,7 @@ SPLASH = f"""
   ██║     ██╔══██╗██║   ██║██║╚████║██║   ██║ ██╔██╗ 
   ╚██████╗██║  ██║╚██████╔╝██║ ╚███║╚██████╔╝██╔╝╚██╗
    ╚═════╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚══╝ ╚═════╝ ╚═╝  ╚═╝
-{Color.RESET}{Color.GRAY}              Control de Versiones  v0.2.0{Color.RESET}
+{Color.RESET}{Color.GRAY}              Control de Versiones  v0.2.1{Color.RESET}
 """
 
 # ─────────────────────────────────────────────
@@ -583,9 +583,14 @@ def _cmd_historial():
         if meta_file.exists():
             with open(meta_file) as f:
                 meta = json.load(f)
+            # Convertir versión a entero
+            try:
+                meta["version"] = int(float(meta["version"]))
+            except (ValueError, TypeError):
+                pass
             versiones_data.append(meta)
 
-    versiones_data.sort(key=lambda x: float(str(x["version"]).replace(".", "")), reverse=True)
+    versiones_data.sort(key=lambda x: int(x["version"]), reverse=True)
 
     for meta in versiones_data:
         v = meta["version"]
@@ -625,11 +630,15 @@ def _cmd_restaurar_interactivo():
     versiones = []
     for v_dir in sorted(versiones_dir.glob("version_*")):
         try:
-            num = float(v_dir.name.replace("version_", ""))
+            num_str = v_dir.name.replace("version_", "")
+            # Convertir a entero (formato nuevo)
+            num = int(float(num_str))
             meta_file = v_dir / "metadatos.json"
             if meta_file.exists():
                 with open(meta_file) as f:
                     meta = json.load(f)
+                # Asegurar que la versión en metadata también sea entero
+                meta["version"] = num
                 versiones.append((num, meta))
         except:
             continue
@@ -643,7 +652,8 @@ def _cmd_restaurar_interactivo():
     try:
         with open(proyecto_json) as f:
             datos = json.load(f)
-        version_actual = float(datos.get("version_actual", 1))
+        # Convertir a entero
+        version_actual = int(float(datos.get("version_actual", 1)))
     except:
         pass
     
@@ -902,12 +912,16 @@ def _cmd_eliminar_version_interactivo():
     versiones = []
     for v_dir in sorted(versiones_dir.glob("version_*")):
         try:
-            num = float(v_dir.name.replace("version_", ""))
+            num_str = v_dir.name.replace("version_", "")
+            # Convertir a entero (formato nuevo)
+            num = int(float(num_str))
             if num > 1:  # Excluir versión 1
                 meta_file = v_dir / "metadatos.json"
                 if meta_file.exists():
                     with open(meta_file) as f:
                         meta = json.load(f)
+                    # Asegurar que la versión en metadata también sea entero
+                    meta["version"] = num
                     versiones.append((num, meta))
         except:
             continue
@@ -921,7 +935,8 @@ def _cmd_eliminar_version_interactivo():
     try:
         with open(proyecto_json) as f:
             datos = json.load(f)
-        version_actual = float(datos.get("version_actual", 1))
+        # Convertir a entero
+        version_actual = int(float(datos.get("version_actual", 1)))
     except:
         pass
     
@@ -1020,9 +1035,9 @@ def _cmd_eliminar_version_interactivo():
     
     if debe_restaurar:
         # Buscar la versión anterior
-        versiones_disponibles = sorted([float(v_dir.name.replace("version_", "")) 
+        versiones_disponibles = sorted([int(float(v_dir.name.replace("version_", ""))) 
                                        for v_dir in versiones_dir.glob("version_*")
-                                       if float(v_dir.name.replace("version_", "")) != numero_version])
+                                       if int(float(v_dir.name.replace("version_", ""))) != numero_version])
         if versiones_disponibles:
             version_a_restaurar = versiones_disponibles[-1]  # La más reciente que no sea la actual
         else:
@@ -1272,7 +1287,7 @@ def main():
             mostrar_ayuda()
 
         elif comando in ["--version", "-v"]:
-            print(f"\n  {c(Color.CYAN, 'Cronux-CRX')} v0.2.0  —  Control de Versiones Local\n")
+            print(f"\n  {c(Color.CYAN, 'Cronux-CRX')} v0.2.1  —  Control de Versiones Local\n")
 
         elif comando in ["modo", "mode"]:
             cambiar_modo()

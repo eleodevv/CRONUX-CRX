@@ -194,6 +194,12 @@ def restaurar_version_cli(version_elegida, auto_instalar=True, callback_progreso
     if version_elegida.startswith('v'):
         version_elegida = version_elegida[1:]
     
+    # Convertir a entero (formato nuevo)
+    try:
+        version_elegida = str(int(float(version_elegida)))
+    except (ValueError, TypeError):
+        pass
+    
     # Verificar que la versión existe
     carpeta_version = obtener_ruta_cronux() / "versiones" / f"version_{version_elegida}"
     
