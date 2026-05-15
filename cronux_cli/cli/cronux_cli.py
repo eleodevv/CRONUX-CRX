@@ -226,10 +226,10 @@ def modo_interactivo():
     import tty
     import termios
     
-    # Migrar versiones si es necesario (solo si estamos en un proyecto)
+    # Migrar versiones si es necesario (silencioso)
     if verificarCronux():
         from funcion_verficar import migrar_versiones_a_enteros
-        migrar_versiones_a_enteros()
+        migrar_versiones_a_enteros(silencioso=True)
     
     def getch():
         """Lee una tecla sin esperar Enter"""
@@ -515,9 +515,9 @@ def _cmd_guardar(args):
         info("Usa 'cronux crear <nombre>' para crear uno")
         return
     
-    # Migrar versiones si es necesario
+    # Migrar versiones si es necesario (silencioso)
     from funcion_verficar import migrar_versiones_a_enteros
-    migrar_versiones_a_enteros()
+    migrar_versiones_a_enteros(silencioso=True)
 
     # Obtener mensaje
     if args:
@@ -1030,9 +1030,19 @@ def _cmd_eliminar_version_interactivo():
     
     # Eliminar versión
     try:
-        version_dir = versiones_dir / f"version_{numero_version}"
-        if version_dir.exists():
-            shutil.rmtree(version_dir)
+        # Buscar la versión (soportar ambos formatos)
+        version_dir = None
+        for v_dir in versiones_dir.glob("version_*"):
+            nombre = v_dir.name.replace("version_", "")
+            if nombre == str(numero_version) or nombre == f"{int(numero_version)}.0":
+                version_dir = v_dir
+                break
+        
+        if not version_dir or not version_dir.exists():
+            error(f"La versión v{numero_version} no existe")
+            return
+        
+        shutil.rmtree(version_dir)
         
         # Renumerar versiones posteriores (decrementar en 1)
         versiones_posteriores = []

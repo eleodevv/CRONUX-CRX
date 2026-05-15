@@ -27,12 +27,12 @@ def determinar_numero_version():
     if not versiones:
         return 1
     
-    # Extraer números de versión y convertir a enteros
+    # Extraer números de versión
     numeros = []
     for version_dir in versiones:
         try:
             numero_str = version_dir.name.replace("version_", "")
-            # Convertir a float primero (por si hay decimales), luego a int
+            # Convertir a int (ya deberían estar migradas)
             numero = int(float(numero_str))
             numeros.append(numero)
         except (ValueError, TypeError):
@@ -45,7 +45,7 @@ def determinar_numero_version():
     return max(numeros) + 1
 
 
-def migrar_versiones_a_enteros():
+def migrar_versiones_a_enteros(silencioso=False):
     """Migra versiones con decimales (1.0, 1.1, 1.2) a enteros (1, 2, 3)"""
     import shutil
     import json
@@ -75,8 +75,9 @@ def migrar_versiones_a_enteros():
     if not tiene_decimales:
         return  # Ya están en formato entero
     
-    print()
-    print(f"  {c(Color.YELLOW, '⚙')}  Migrando versiones al nuevo formato...")
+    if not silencioso:
+        print()
+        print(f"  {c(Color.YELLOW, '⚙')}  Migrando versiones al nuevo formato...")
     
     # Ordenar por número
     versiones.sort(key=lambda x: x[0])
@@ -126,7 +127,8 @@ def migrar_versiones_a_enteros():
             with open(proyecto_json, "w") as f:
                 json.dump(datos, f, indent=2)
         
-        print(f"  {c(Color.GREEN, '✓')}  Versiones migradas: {len(versiones)} versiones convertidas")
+        if not silencioso:
+            print(f"  {c(Color.GREEN, '✓')}  Versiones migradas: {len(versiones)} versiones convertidas")
         
     finally:
         # Limpiar directorio temporal
