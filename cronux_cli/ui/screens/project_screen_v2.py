@@ -1848,132 +1848,30 @@ class ProjectScreenV2:
         self.page.update()
 
     def _show_async_progress_dialog(self, title, operation_type, *args):
-        """Muestra un loader con timeline Git-style y ejecuta la operación de forma asíncrona"""
-        # Definir pasos según el tipo de operación
-        if operation_type == "save":
-            steps = [
-                {"title": "Preparando archivos", "subtitle": "Analizando cambios en el proyecto", "status": "active"},
-                {"title": "Creando snapshot", "subtitle": "Guardando estado actual", "status": "pending"},
-                {"title": "Finalizando", "subtitle": "Actualizando historial", "status": "pending"},
-            ]
-        elif operation_type == "restore":
-            steps = [
-                {"title": "Leyendo versión", "subtitle": "Cargando snapshot guardado", "status": "active"},
-                {"title": "Restaurando archivos", "subtitle": "Aplicando cambios al proyecto", "status": "pending"},
-                {"title": "Finalizando", "subtitle": "Actualizando estado", "status": "pending"},
-            ]
-        elif operation_type == "delete":
-            steps = [
-                {"title": "Eliminando versiones", "subtitle": "Borrando snapshots guardados", "status": "active"},
-                {"title": "Limpiando archivos", "subtitle": "Removiendo carpeta .cronux", "status": "pending"},
-                {"title": "Finalizando", "subtitle": "Actualizando lista de proyectos", "status": "pending"},
-            ]
-        elif operation_type == "export":
-            steps = [
-                {"title": "Preparando archivos", "subtitle": "Recopilando contenido del proyecto", "status": "active"},
-                {"title": "Comprimiendo", "subtitle": "Creando archivo ZIP", "status": "pending"},
-                {"title": "Finalizando", "subtitle": "Guardando en destino", "status": "pending"},
-            ]
-        elif operation_type == "delete_version":
-            steps = [
-                {"title": "Localizando versión", "subtitle": "Buscando snapshot a eliminar", "status": "active"},
-                {"title": "Eliminando archivos", "subtitle": "Borrando snapshot", "status": "pending"},
-                {"title": "Finalizando", "subtitle": "Actualizando historial", "status": "pending"},
-            ]
-        else:
-            steps = [
-                {"title": "Procesando", "subtitle": "Ejecutando operación", "status": "active"},
-            ]
-        
-        # Crear loader con timeline
-        loader = LoaderView(self.page, title, steps)
-        
-        # Crear dialog
-        self.progress_dialog = ft.AlertDialog(
-            modal=True,
-            content=ft.Container(
-                content=loader.build(),
-                width=600,
-                height=500,
-                padding=ft.Padding.all(0),
-            ),
-            shape=ft.RoundedRectangleBorder(radius=20),
-            bgcolor="#F7FAFC",
-        )
-        
-        # Guardar referencia al loader
-        self.current_loader = loader
-        
-        # Mostrar dialog
-        self.page.overlay.append(self.progress_dialog)
-        self.progress_dialog.open = True
-        self.page.update()
-        
-        # Función async para ejecutar la operación
-        async def ejecutar_operacion_async():
-            import asyncio
-            
+            """Muestra un loader y ejecuta la operación de forma SÍNCRONA (como el original)"""
+            # Ejecutar operación directamente de forma síncrona
             try:
-                # Paso 1
-                await asyncio.sleep(0.5)
-                steps[0]["status"] = "completed"
-                if len(steps) > 1:
-                    steps[1]["status"] = "active"
-                loader.update_steps(steps)
-                
-                # Paso 2 - Operación real
-                await asyncio.sleep(0.3)
+                resultado = None
                 
                 if operation_type == "save":
                     mensaje = args[0] if args else "Versión guardada"
-                    proyecto_actualizado = await asyncio.to_thread(
-                        guardar_version_ui, self.proyecto["ruta"], mensaje, None
-                    )
-                    resultado = proyecto_actualizado
+                    resultado = guardar_version_ui(self.proyecto["ruta"], mensaje, None)
                 elif operation_type == "restore":
                     numero_version = args[0] if args else 1
-                    proyecto_actualizado = await asyncio.to_thread(
-                        restaurar_version_ui, self.proyecto["ruta"], numero_version
-                    )
-                    resultado = proyecto_actualizado
+                    resultado = restaurar_version_ui(self.proyecto["ruta"], numero_version)
                 elif operation_type == "delete":
-                    resultado = await asyncio.to_thread(
-                        eliminar_proyecto_ui, self.proyecto["ruta"]
-                    )
+                    resultado = eliminar_proyecto_ui(self.proyecto["ruta"])
                 elif operation_type == "export":
                     ruta_destino = args[0] if args else ""
-                    resultado = await asyncio.to_thread(
-                        exportar_proyecto_ui, self.proyecto["ruta"], ruta_destino
-                    )
+                    resultado = exportar_proyecto_ui(self.proyecto["ruta"], ruta_destino)
                 elif operation_type == "delete_version":
                     numero_version = args[0] if args else 1
                     from cli_integration import eliminar_version_ui
-                    resultado = await asyncio.to_thread(
-                        eliminar_version_ui, self.proyecto["ruta"], numero_version
-                    )
+                    resultado = eliminar_version_ui(self.proyecto["ruta"], numero_version)
                 else:
                     resultado = True
-                
-                if len(steps) > 1:
-                    steps[1]["status"] = "completed"
-                if len(steps) > 2:
-                    steps[2]["status"] = "active"
-                loader.update_steps(steps)
-                
-                # Paso 3 - Finalizar
-                await asyncio.sleep(0.5)
-                if len(steps) > 2:
-                    steps[2]["status"] = "completed"
-                loader.update_steps(steps)
-                
-                # Pequeña pausa para ver el timeline completo
-                await asyncio.sleep(0.8)
-                
-                # Cerrar dialog
-                self.progress_dialog.open = False
-                self.page.update()
-                
-                # Manejar resultado
+
+                # Manejar resultado inmediatamente
                 if resultado:
                     if operation_type == "save":
                         self.proyecto = resultado
@@ -1982,7 +1880,6 @@ class ProjectScreenV2:
                         self.page.controls.clear()
                         self.page.add(self.build())
                         self.page.update()
-                        await asyncio.sleep(0.2)
                         self._show_success_snackbar("✓ Versión guardada exitosamente")
                     elif operation_type == "restore":
                         self.proyecto = resultado
@@ -1991,16 +1888,13 @@ class ProjectScreenV2:
                         self.page.controls.clear()
                         self.page.add(self.build())
                         self.page.update()
-                        await asyncio.sleep(0.2)
                         self._show_success_snackbar("✓ Versión restaurada exitosamente")
                     elif operation_type == "delete":
                         self._show_success_snackbar("✓ Proyecto eliminado exitosamente")
-                        await asyncio.sleep(1)
                         self.on_back()
                     elif operation_type == "export":
                         self._show_success_snackbar(f"✓ Proyecto exportado: {Path(resultado).name}")
                     elif operation_type == "delete_version":
-                        # Recargar proyecto
                         from cli_integration import leer_info_proyecto
                         self.proyecto = leer_info_proyecto(self.proyecto["ruta"])
                         if self.on_refresh:
@@ -2008,17 +1902,12 @@ class ProjectScreenV2:
                         self.page.controls.clear()
                         self.page.add(self.build())
                         self.page.update()
-                        await asyncio.sleep(0.2)
                         self._show_success_snackbar("✓ Versión eliminada exitosamente")
                 else:
-                    self._show_error_snackbar(f"❌ Error en la operación")
-                    
+                    self._show_error_snackbar("❌ Error en la operación")
+
             except Exception as e:
                 import traceback
-                traceback.print_exc()
-                self.progress_dialog.open = False
-                self.page.update()
-                self._show_error_snackbar(f"❌ Error: {str(e)}")
-        
-        # Ejecutar con run_task
-        self.page.run_task(ejecutar_operacion_async)
+                error_detail = traceback.format_exc()
+                print(f"Error en operación: {error_detail}")
+                self._show_error_snackbar(f"Error: {str(e)}")
