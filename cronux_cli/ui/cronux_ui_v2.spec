@@ -15,7 +15,6 @@ a = Analysis(
     ],
     hiddenimports=[
         'flet',
-        'flet.core',
         'flet.auth',
         'flet.controls',
         'cli_integration',
@@ -46,12 +45,10 @@ a = Analysis(
 )
 
 # Collect all flet packages
-a.datas += collect_all('flet')[0]
-a.binaries += collect_all('flet')[1]
-a.datas += collect_all('flet_core')[0]
-a.binaries += collect_all('flet_core')[1]
-a.datas += collect_all('flet_runtime')[0]
-a.binaries += collect_all('flet_runtime')[1]
+flet_datas, flet_binaries, flet_hiddenimports = collect_all('flet')
+a.datas += flet_datas
+a.binaries += flet_binaries
+a.hiddenimports += flet_hiddenimports
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
