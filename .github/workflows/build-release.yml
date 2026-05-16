@@ -385,23 +385,25 @@ jobs:
           Write-Host "📦 Copiando módulos CLI..."
           New-Item -ItemType Directory -Force -Path "cronux_cli/ui/cli"
           Copy-Item "cronux_cli/cli/*.py" -Destination "cronux_cli/ui/cli/"
+          
+          Write-Host "📋 Verificando archivos copiados:"
           Get-ChildItem -Path "cronux_cli/ui/cli"
+          Get-ChildItem -Path "cronux_cli/ui" -Filter "*.py"
           
           Write-Host "🔨 Building GUI with PyInstaller..."
           cd cronux_cli/ui
           
+          # Usar --onedir primero para debugging (genera carpeta con todos los archivos)
           python -m PyInstaller `
-            --onefile `
+            --onedir `
             --windowed `
             --name "CRONUX-CRX" `
+            --add-data "cli_integration.py;." `
             --add-data "screens;screens" `
             --add-data "components;components" `
             --add-data "cli;cli" `
             --add-data "../assets;assets" `
             --icon "../assets/cronux_icon.ico" `
-            --hidden-import "flet" `
-            --hidden-import "flet.auth" `
-            --hidden-import "flet.controls" `
             --hidden-import "cli_integration" `
             --hidden-import "screens.home_screen" `
             --hidden-import "screens.wizard_screen" `
@@ -423,14 +425,25 @@ jobs:
           
           cd ../..
           
-          if (Test-Path "cronux_cli/ui/dist/CRONUX-CRX.exe") {
-            $size = (Get-Item "cronux_cli/ui/dist/CRONUX-CRX.exe").Length / 1MB
+          # Verificar que se creó el directorio con el ejecutable
+          if (Test-Path "cronux_cli/ui/dist/CRONUX-CRX/CRONUX-CRX.exe") {
+            $size = (Get-Item "cronux_cli/ui/dist/CRONUX-CRX/CRONUX-CRX.exe").Length / 1MB
             Write-Host "✅ GUI executable created: $([math]::Round($size, 2)) MB"
-            # Mover el exe al directorio dist principal
+            
+            # Listar contenido del directorio para verificar
+            Write-Host "📂 Contenido del directorio dist:"
+            Get-ChildItem -Path "cronux_cli/ui/dist/CRONUX-CRX" | Select-Object Name, Length
+            
+            # Comprimir todo el directorio en un ZIP
+            Write-Host "📦 Comprimiendo aplicación..."
+            Compress-Archive -Path "cronux_cli/ui/dist/CRONUX-CRX/*" -DestinationPath "dist/CRONUX-CRX-Windows.zip" -Force
+            
+            # También copiar el exe solo para compatibilidad
             New-Item -ItemType Directory -Force -Path "dist"
-            Copy-Item "cronux_cli/ui/dist/CRONUX-CRX.exe" -Destination "dist/"
+            Copy-Item "cronux_cli/ui/dist/CRONUX-CRX/CRONUX-CRX.exe" -Destination "dist/"
           } else {
             Write-Host "❌ GUI executable not found"
+            Write-Host "📂 Contenido de dist:"
             Get-ChildItem -Path "cronux_cli/ui/dist" -Recurse
             exit 1
           }
@@ -447,7 +460,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-packages
-          path: dist/*.exe
+          path: |
+            dist/*.exe
+            dist/*.zip
 
   # ── Release ────────────────────────────────────────────
   release:
@@ -489,7 +504,8 @@ jobs:
             - `Cronux-CRX-CLI-Installer.pkg` — macOS
 
             **GUI (Interfaz gráfica):**
-            - `CRONUX-CRX.exe` — Windows (ejecutable portable, un solo archivo)
+            - `CRONUX-CRX-Windows.zip` — Windows (aplicación completa con dependencias)
+            - `CRONUX-CRX.exe` — Windows (ejecutable portable, requiere dependencias)
             - `cronux-crx-gui_*_amd64.deb` — Linux (Debian/Ubuntu)
             - `CRONUX-CRX-*.dmg` — macOS
 
@@ -506,6 +522,7 @@ jobs:
             ```
           files: |
             artifacts/**/*.exe
+            artifacts/**/*.zip
             artifacts/**/*.deb
             artifacts/**/*.pkg
             artifacts/**/*.dmg
