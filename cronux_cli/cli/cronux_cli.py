@@ -130,6 +130,16 @@ def cambiar_modo():
 # ─────────────────────────────────────────────
 #  Colores ANSI
 # ─────────────────────────────────────────────
+
+# Habilitar colores ANSI en Windows
+if IS_WINDOWS:
+    try:
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
+    except:
+        pass
+
 class Color:
     RESET   = "\033[0m"
     BOLD    = "\033[1m"

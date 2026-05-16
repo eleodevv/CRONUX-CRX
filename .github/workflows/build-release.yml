@@ -386,37 +386,20 @@ jobs:
           New-Item -ItemType Directory -Force -Path "cronux_cli/ui/cli"
           Copy-Item "cronux_cli/cli/*.py" -Destination "cronux_cli/ui/cli/"
           
-          Write-Host "🔨 Building GUI with PyInstaller..."
-          python -m PyInstaller `
-            --onefile `
-            --windowed `
-            --name "CRONUX-CRX" `
-            --add-data "cronux_cli/ui/screens;screens" `
-            --add-data "cronux_cli/ui/components;components" `
-            --add-data "cronux_cli/ui/cli;cli" `
-            --add-data "cronux_cli/assets;assets" `
-            --icon "cronux_cli/assets/cronux_icon.ico" `
-            --hidden-import "flet" `
-            --hidden-import "flet.core" `
-            --hidden-import "flet.auth" `
-            --hidden-import "flet.controls" `
-            --hidden-import "cli_integration" `
-            --hidden-import "screens.home_screen" `
-            --hidden-import "screens.wizard_screen" `
-            --hidden-import "screens.project_screen_v2" `
-            --hidden-import "components.terminal_loader" `
-            --collect-all "flet" `
-            --collect-all "flet_core" `
-            --collect-all "flet_runtime" `
-            --clean `
-            cronux_cli/ui/cronux_ui_v2.py
+          Write-Host "🔨 Building GUI with PyInstaller usando spec file..."
+          cd cronux_cli/ui
+          python -m PyInstaller cronux_ui_v2.spec --clean
+          cd ../..
           
-          if (Test-Path "dist/CRONUX-CRX.exe") {
-            $size = (Get-Item "dist/CRONUX-CRX.exe").Length / 1MB
+          if (Test-Path "cronux_cli/ui/dist/CRONUX-CRX.exe") {
+            $size = (Get-Item "cronux_cli/ui/dist/CRONUX-CRX.exe").Length / 1MB
             Write-Host "✅ GUI executable created: $([math]::Round($size, 2)) MB"
+            # Mover el exe al directorio dist principal
+            New-Item -ItemType Directory -Force -Path "dist"
+            Copy-Item "cronux_cli/ui/dist/CRONUX-CRX.exe" -Destination "dist/"
           } else {
             Write-Host "❌ GUI executable not found"
-            Get-ChildItem -Path "dist" -Recurse
+            Get-ChildItem -Path "cronux_cli/ui/dist" -Recurse
             exit 1
           }
           
