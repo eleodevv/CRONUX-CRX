@@ -297,11 +297,13 @@ jobs:
             echo "✅ App found: $APP_PATH"
             echo "APP_PATH=$APP_PATH" >> $GITHUB_ENV
             
-            # Copiar icono personalizado
-            if [ -f "cronux_cli/assets/cronux_cli.icns" ]; then
-              echo "📦 Copiando icono personalizado..."
-              cp cronux_cli/assets/cronux_cli.icns "$APP_PATH/Contents/Resources/app_icon.icns"
-              echo "✅ Icono copiado"
+            # Copiar icono personalizado de Cronux
+            if [ -f "cronux_cli/assets/cronux_icon.icns" ]; then
+              echo "📦 Copiando icono personalizado de Cronux..."
+              cp cronux_cli/assets/cronux_icon.icns "$APP_PATH/Contents/Resources/app_icon.icns"
+              echo "✅ Icono de Cronux copiado"
+            else
+              echo "⚠️  Icono cronux_icon.icns no encontrado, usando icono por defecto"
             fi
             
             # Ad-hoc signature
