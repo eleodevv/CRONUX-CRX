@@ -58,7 +58,6 @@ exe = EXE(
     a.binaries,
     a.zipfiles,
     a.datas,
-    [],
     name='CRONUX-CRX',
     debug=False,
     bootloader_ignore_signals=False,
