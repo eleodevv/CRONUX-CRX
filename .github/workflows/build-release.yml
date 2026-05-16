@@ -360,6 +360,7 @@ jobs:
       - name: Configure Flutter
         run: |
           flutter config --no-analytics
+          flutter precache --windows
           flutter doctor -v
 
       - name: Install Flet and dependencies
@@ -379,72 +380,60 @@ jobs:
             --clean `
             cronux_cli/installer_windows_cli.py
 
-      - name: Build GUI with PyInstaller
+      - name: Build GUI with Flet
+        env:
+          FLET_CLI_NO_RICH_OUTPUT: "true"
         run: |
-          # Copiar módulos CLI a la carpeta UI para que PyInstaller los incluya
+          # Copiar módulos CLI a la carpeta UI para que Flet los incluya
           Write-Host "📦 Copiando módulos CLI..."
           New-Item -ItemType Directory -Force -Path "cronux_cli/ui/cli"
           Copy-Item "cronux_cli/cli/*.py" -Destination "cronux_cli/ui/cli/"
           
-          Write-Host "📋 Verificando archivos copiados:"
+          Write-Host "📋 Archivos CLI copiados:"
           Get-ChildItem -Path "cronux_cli/ui/cli"
-          Get-ChildItem -Path "cronux_cli/ui" -Filter "*.py"
           
-          Write-Host "🔨 Building GUI with PyInstaller..."
+          Write-Host "🔨 Building GUI with Flet..."
           cd cronux_cli/ui
           
-          # Usar --onedir primero para debugging (genera carpeta con todos los archivos)
-          python -m PyInstaller `
-            --onedir `
-            --windowed `
-            --name "CRONUX-CRX" `
-            --add-data "cli_integration.py;." `
-            --add-data "screens;screens" `
-            --add-data "components;components" `
-            --add-data "cli;cli" `
-            --add-data "../assets;assets" `
-            --icon "../assets/cronux_icon.ico" `
-            --hidden-import "cli_integration" `
-            --hidden-import "screens.home_screen" `
-            --hidden-import "screens.wizard_screen" `
-            --hidden-import "screens.project_screen_v2" `
-            --hidden-import "components.terminal_loader" `
-            --hidden-import "components.gradient_button" `
-            --hidden-import "components.loader" `
-            --hidden-import "components.project_type_card" `
-            --hidden-import "cli.crear_proyecto" `
-            --hidden-import "cli.guardar_version" `
-            --hidden-import "cli.ver_historial" `
-            --hidden-import "cli.restaurar_versiones" `
-            --hidden-import "cli.info_proyecto" `
-            --hidden-import "cli.funcion_verficar" `
-            --hidden-import "cli.eliminar_proyecto" `
-            --collect-all "flet" `
-            --clean `
-            cronux_ui_v2.py
+          flet build windows `
+            --module-name "cronux_ui_v2" `
+            --product "CRONUX-CRX" `
+            --project cronux-crx `
+            --build-version "${{ github.ref_name || github.event.inputs.version }}" `
+            --build-number "${{ github.run_number }}" `
+            --org "dev.cronux" `
+            --bundle-id "dev.cronux.crx" `
+            --description "Sistema de Control de Versiones Local" `
+            --copyright "Copyright 2024 CRONUX-CRX" `
+            --yes `
+            --no-rich-output
           
           cd ../..
           
-          # Verificar que se creó el directorio con el ejecutable
-          if (Test-Path "cronux_cli/ui/dist/CRONUX-CRX/CRONUX-CRX.exe") {
-            $size = (Get-Item "cronux_cli/ui/dist/CRONUX-CRX/CRONUX-CRX.exe").Length / 1MB
-            Write-Host "✅ GUI executable created: $([math]::Round($size, 2)) MB"
+          Write-Host "📂 Buscando ejecutable en build/windows:"
+          Get-ChildItem -Path "cronux_cli/ui/build/windows" -Recurse -Filter "*.exe" | Select-Object FullName, Length
+          
+          # Buscar el ejecutable generado por Flet
+          $exePath = Get-ChildItem -Path "cronux_cli/ui/build/windows" -Recurse -Filter "*.exe" | Select-Object -First 1
+          
+          if ($exePath) {
+            $size = $exePath.Length / 1MB
+            Write-Host "✅ GUI executable found: $($exePath.FullName) ($([math]::Round($size, 2)) MB)"
             
-            # Listar contenido del directorio para verificar
-            Write-Host "📂 Contenido del directorio dist:"
-            Get-ChildItem -Path "cronux_cli/ui/dist/CRONUX-CRX" | Select-Object Name, Length
-            
-            # Comprimir todo el directorio en un ZIP
-            Write-Host "📦 Comprimiendo aplicación..."
-            Compress-Archive -Path "cronux_cli/ui/dist/CRONUX-CRX/*" -DestinationPath "dist/CRONUX-CRX-Windows.zip" -Force
-            
-            # También copiar el exe solo para compatibilidad
             New-Item -ItemType Directory -Force -Path "dist"
-            Copy-Item "cronux_cli/ui/dist/CRONUX-CRX/CRONUX-CRX.exe" -Destination "dist/"
+            
+            # Copiar el ejecutable
+            Copy-Item $exePath.FullName -Destination "dist/CRONUX-CRX.exe"
+            
+            # Comprimir toda la carpeta build/windows para incluir dependencias
+            Write-Host "📦 Comprimiendo aplicación completa..."
+            $buildDir = Split-Path $exePath.FullName -Parent
+            Compress-Archive -Path "$buildDir\*" -DestinationPath "dist/CRONUX-CRX-Windows.zip" -Force
+            Write-Host "✅ ZIP creado"
           } else {
             Write-Host "❌ GUI executable not found"
-            Write-Host "📂 Contenido de dist:"
-            Get-ChildItem -Path "cronux_cli/ui/dist" -Recurse
+            Write-Host "📂 Contenido de build:"
+            Get-ChildItem -Path "cronux_cli/ui/build" -Recurse | Select-Object FullName
             exit 1
           }
           
