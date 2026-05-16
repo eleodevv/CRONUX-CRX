@@ -6,6 +6,7 @@ Cronux-CRX CLI - Sistema de control de versiones local
 import sys
 import os
 from pathlib import Path
+import platform
 
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -20,6 +21,49 @@ try:
 except ImportError as e:
     print(f"Error al importar módulos: {e}")
     sys.exit(1)
+
+
+# ─────────────────────────────────────────────
+#  Utilidades multiplataforma
+# ─────────────────────────────────────────────
+IS_WINDOWS = platform.system() == "Windows"
+
+def getch_multiplataforma():
+    """Lee una tecla sin esperar Enter (compatible con Windows y Unix)"""
+    if IS_WINDOWS:
+        import msvcrt
+        key = msvcrt.getch()
+        # En Windows, las teclas especiales vienen en dos bytes
+        if key in (b'\x00', b'\xe0'):
+            key = msvcrt.getch()
+            # Mapear teclas especiales de Windows a códigos Unix-like
+            key_map = {
+                b'H': '\x1b[A',  # Arriba
+                b'P': '\x1b[B',  # Abajo
+                b'K': '\x1b[D',  # Izquierda
+                b'M': '\x1b[C',  # Derecha
+            }
+            return key_map.get(key, key.decode('latin-1', errors='ignore'))
+        # Decodificar teclas normales
+        try:
+            return key.decode('utf-8')
+        except:
+            return key.decode('latin-1', errors='ignore')
+    else:
+        import sys
+        import tty
+        import termios
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(fd)
+            key = sys.stdin.read(1)
+            # Leer secuencias de escape (flechas)
+            if key == '\x1b':
+                key += sys.stdin.read(2)
+            return key
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
 
 # ─────────────────────────────────────────────
@@ -223,30 +267,10 @@ def mostrar_ayuda():
 # ─────────────────────────────────────────────
 def modo_interactivo():
     """Modo interactivo con navegación por flechas"""
-    import sys
-    import tty
-    import termios
-    
     # Migrar versiones si es necesario (silencioso)
     if verificarCronux():
         from funcion_verficar import migrar_versiones_a_enteros
         migrar_versiones_a_enteros(silencioso=True)
-    
-    def getch():
-        """Lee una tecla sin esperar Enter"""
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
-        try:
-            tty.setraw(fd)
-            ch = sys.stdin.read(1)
-            if ch == '\x1b':  # Secuencia de escape
-                ch2 = sys.stdin.read(1)
-                if ch2 == '[':
-                    ch3 = sys.stdin.read(1)
-                    return f'\x1b[{ch3}'
-            return ch
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
     
     while True:  # Loop continuo
         en_proyecto = verificarCronux()
@@ -326,7 +350,7 @@ def modo_interactivo():
         
         # Loop de navegación
         while True:
-            key = getch()
+            key = getch_multiplataforma()
             
             if key == '\x1b[A':  # Flecha arriba
                 seleccion = max(0, seleccion - 1)
@@ -395,25 +419,6 @@ def modo_interactivo():
 # ─────────────────────────────────────────────
 def _cmd_crear(nombre, args):
     """Wizard interactivo para crear proyecto con navegación por flechas"""
-    import sys
-    import tty
-    import termios
-    
-    def getch():
-        """Lee una tecla sin esperar Enter"""
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
-        try:
-            tty.setraw(fd)
-            ch = sys.stdin.read(1)
-            if ch == '\x1b':  # Secuencia de escape
-                ch2 = sys.stdin.read(1)
-                if ch2 == '[':
-                    ch3 = sys.stdin.read(1)
-                    return f'\x1b[{ch3}'
-            return ch
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
     
     categorias = [
         ("💻", "Software",      ["python","javascript","nodejs","react","java","go","php","ruby","flutter","dotnet","general"]),
@@ -445,7 +450,7 @@ def _cmd_crear(nombre, args):
     mostrar_categorias()
     
     while True:
-        key = getch()
+        key = getch_multiplataforma()
         if key == '\x1b[A':
             seleccion_cat = max(0, seleccion_cat - 1)
             mostrar_categorias()
@@ -481,7 +486,7 @@ def _cmd_crear(nombre, args):
     mostrar_tipos()
     
     while True:
-        key = getch()
+        key = getch_multiplataforma()
         if key == '\x1b[A':
             seleccion_tipo = max(0, seleccion_tipo - 1)
             mostrar_tipos()
@@ -619,9 +624,6 @@ def _cmd_restaurar_interactivo():
         return
     
     import json
-    import sys
-    import tty
-    import termios
     
     cronux_dir = Path.cwd() / ".cronux"
     versiones_dir = cronux_dir / "versiones"
@@ -669,22 +671,6 @@ def _cmd_restaurar_interactivo():
     
     seleccion = 0
     
-    def getch():
-        """Lee una tecla sin esperar Enter"""
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
-        try:
-            tty.setraw(fd)
-            ch = sys.stdin.read(1)
-            if ch == '\x1b':  # Secuencia de escape
-                ch2 = sys.stdin.read(1)
-                if ch2 == '[':
-                    ch3 = sys.stdin.read(1)
-                    return f'\x1b[{ch3}'
-            return ch
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-    
     def mostrar_opciones():
         """Muestra las opciones con la selección actual resaltada"""
         # Mover cursor al inicio
@@ -717,7 +703,7 @@ def _cmd_restaurar_interactivo():
     
     # Loop de navegación
     while True:
-        key = getch()
+        key = getch_multiplataforma()
         
         if key == '\x1b[A':  # Flecha arriba
             seleccion = max(0, seleccion - 1)
@@ -901,9 +887,6 @@ def _cmd_eliminar_version_interactivo():
     
     import json
     import shutil
-    import sys
-    import tty
-    import termios
     
     cronux_dir = Path.cwd() / ".cronux"
     versiones_dir = cronux_dir / "versiones"
@@ -952,22 +935,6 @@ def _cmd_eliminar_version_interactivo():
     
     seleccion = 0
     
-    def getch():
-        """Lee una tecla sin esperar Enter"""
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
-        try:
-            tty.setraw(fd)
-            ch = sys.stdin.read(1)
-            if ch == '\x1b':  # Secuencia de escape
-                ch2 = sys.stdin.read(1)
-                if ch2 == '[':
-                    ch3 = sys.stdin.read(1)
-                    return f'\x1b[{ch3}'
-            return ch
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-    
     def mostrar_opciones():
         """Muestra las opciones con la selección actual resaltada"""
         # Mover cursor al inicio
@@ -1000,7 +967,7 @@ def _cmd_eliminar_version_interactivo():
     
     # Loop de navegación
     while True:
-        key = getch()
+        key = getch_multiplataforma()
         
         if key == '\x1b[A':  # Flecha arriba
             seleccion = max(0, seleccion - 1)

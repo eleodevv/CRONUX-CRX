@@ -400,6 +400,11 @@ jobs:
             --hidden-import "flet.core" `
             --hidden-import "flet.auth" `
             --hidden-import "flet.controls" `
+            --hidden-import "cli_integration" `
+            --hidden-import "screens.home_screen" `
+            --hidden-import "screens.wizard_screen" `
+            --hidden-import "screens.project_screen_v2" `
+            --hidden-import "components.terminal_loader" `
             --collect-all "flet" `
             --collect-all "flet_core" `
             --collect-all "flet_runtime" `
