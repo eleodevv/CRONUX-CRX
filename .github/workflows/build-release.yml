@@ -92,6 +92,9 @@ jobs:
           echo "📦 Copiando módulos CLI..."
           mkdir -p cronux_cli/ui/cli
           cp cronux_cli/cli/*.py cronux_cli/ui/cli/
+          
+          # Copiar icono para flet build (lo detecta automáticamente como assets/icon.png)
+          cp cronux_cli/assets/cronux_icon.png cronux_cli/ui/assets/icon.png
 
           # Build GUI con Flet nativo
           cd cronux_cli/ui
@@ -275,6 +278,9 @@ jobs:
           mkdir -p cronux_cli/ui/cli
           cp cronux_cli/cli/*.py cronux_cli/ui/cli/
           
+          # Copiar icono para flet build
+          cp cronux_cli/assets/cronux_icon.png cronux_cli/ui/assets/icon.png
+          
           cd cronux_cli/ui
           flet build macos \
             --module-name "cronux_ui_v2" \
@@ -394,7 +400,7 @@ jobs:
           
           # Copiar icono al directorio de assets de la UI
           Copy-Item "../assets/cronux_icon.ico" -Destination "assets/cronux_icon.ico" -Force
-          Copy-Item "../assets/cronux_icon.png" -Destination "assets/cronux_icon.png" -Force
+          Copy-Item "../assets/cronux_icon.png" -Destination "assets/icon.png" -Force
           
           flet build windows `
             --module-name "cronux_ui_v2" `
@@ -406,7 +412,6 @@ jobs:
             --bundle-id "dev.cronux.crx" `
             --description "Sistema de Control de Versiones Local" `
             --copyright "Copyright 2024 CRONUX-CRX" `
-            --icon "../assets/cronux_icon.png" `
             --yes `
             --no-rich-output
           
