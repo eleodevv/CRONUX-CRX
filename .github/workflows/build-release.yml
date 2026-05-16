@@ -385,10 +385,42 @@ jobs:
           Write-Host "📦 Copiando módulos CLI..."
           New-Item -ItemType Directory -Force -Path "cronux_cli/ui/cli"
           Copy-Item "cronux_cli/cli/*.py" -Destination "cronux_cli/ui/cli/"
+          Get-ChildItem -Path "cronux_cli/ui/cli"
           
-          Write-Host "🔨 Building GUI with PyInstaller usando spec file..."
+          Write-Host "🔨 Building GUI with PyInstaller..."
           cd cronux_cli/ui
-          python -m PyInstaller cronux_ui_v2.spec --clean
+          
+          python -m PyInstaller `
+            --onefile `
+            --windowed `
+            --name "CRONUX-CRX" `
+            --add-data "screens;screens" `
+            --add-data "components;components" `
+            --add-data "cli;cli" `
+            --add-data "../assets;assets" `
+            --icon "../assets/cronux_icon.ico" `
+            --hidden-import "flet" `
+            --hidden-import "flet.auth" `
+            --hidden-import "flet.controls" `
+            --hidden-import "cli_integration" `
+            --hidden-import "screens.home_screen" `
+            --hidden-import "screens.wizard_screen" `
+            --hidden-import "screens.project_screen_v2" `
+            --hidden-import "components.terminal_loader" `
+            --hidden-import "components.gradient_button" `
+            --hidden-import "components.loader" `
+            --hidden-import "components.project_type_card" `
+            --hidden-import "cli.crear_proyecto" `
+            --hidden-import "cli.guardar_version" `
+            --hidden-import "cli.ver_historial" `
+            --hidden-import "cli.restaurar_versiones" `
+            --hidden-import "cli.info_proyecto" `
+            --hidden-import "cli.funcion_verficar" `
+            --hidden-import "cli.eliminar_proyecto" `
+            --collect-all "flet" `
+            --clean `
+            cronux_ui_v2.py
+          
           cd ../..
           
           if (Test-Path "cronux_cli/ui/dist/CRONUX-CRX.exe") {
