@@ -1,237 +1,277 @@
 #!/usr/bin/env python3
 """
 Cronux UI v2 - Diseño minimalista con colores claros
-Estilo: Clean, espacioso, profesional
 """
 
 import flet as ft
 from pathlib import Path
 import sys
-import threading
-
-# Agregar el directorio cli al path
-sys.path.insert(0, str(Path(__file__).parent.parent / "cli"))
-sys.path.insert(0, str(Path(__file__).parent))
-
-from screens.home_screen import HomeScreen
-from screens.wizard_screen import WizardScreen
-from cli_integration import crear_proyecto_ui, leer_info_proyecto, cargar_lista_proyectos, guardar_lista_proyectos
+import os
 
 
-class CronuxUIv2:
-    """Aplicación principal con diseño limpio"""
+def _setup_paths():
+    """Configura los paths para encontrar módulos tanto en dev como en build de Flet"""
+    # En flet build, el código se ejecuta desde un directorio temporal
+    # __file__ puede no estar disponible, usamos sys.executable como referencia
     
-    def __init__(self, page: ft.Page):
-        self.page = page
-        self.page.title = "CRONUX - Control de Versiones Elegante"
-        self.page.window.width = 1200
-        self.page.window.height = 800
-        self.page.window.min_width = 1000
-        self.page.window.min_height = 700
-        self.page.padding = 0
-        self.page.bgcolor = "#FAFAFA"
-        self.page.theme_mode = ft.ThemeMode.LIGHT
-        
-        # Configurar icono de la ventana
-        try:
-            import platform
-            sistema = platform.system()
-            if sistema == "Windows":
-                icon_path = Path(__file__).parent.parent / "assets" / "cronux_icon.ico"
-                if not icon_path.exists():
-                    icon_path = Path(__file__).parent / "assets" / "cronux_icon.ico"
-            elif sistema == "Darwin":
-                icon_path = Path(__file__).parent.parent / "assets" / "cronux_icon.icns"
-                if not icon_path.exists():
-                    icon_path = Path(__file__).parent / "assets" / "cronux_icon.icns"
-            else:
-                icon_path = Path(__file__).parent.parent / "assets" / "cronux_icon.png"
-                if not icon_path.exists():
-                    icon_path = Path(__file__).parent / "assets" / "cronux_icon.png"
+    try:
+        base = Path(__file__).parent
+    except Exception:
+        base = Path(sys.executable).parent
 
+    # Posibles ubicaciones de los módulos CLI
+    candidatos_cli = [
+        base / "cli",                    # ui/cli/ (copiado por el workflow)
+        base.parent / "cli",             # cronux_cli/cli/
+        Path(sys.executable).parent / "cli",
+        Path(os.getcwd()) / "cli",
+    ]
+
+    for ruta in candidatos_cli:
+        if ruta.exists() and str(ruta) not in sys.path:
+            sys.path.insert(0, str(ruta))
+            print(f"[PATH] CLI path: {ruta}")
+            break
+
+    # Path del directorio ui (para screens, components, cli_integration)
+    candidatos_ui = [
+        base,
+        Path(sys.executable).parent,
+        Path(os.getcwd()),
+    ]
+
+    for ruta in candidatos_ui:
+        if ruta.exists() and str(ruta) not in sys.path:
+            sys.path.insert(0, str(ruta))
+            print(f"[PATH] UI path: {ruta}")
+            break
+
+
+def main(page: ft.Page):
+    """Punto de entrada principal"""
+    
+    # 1. Configurar paths PRIMERO
+    _setup_paths()
+
+    # 2. Configurar página básica inmediatamente para que no se vea negro
+    page.title = "CRONUX - Control de Versiones"
+    page.bgcolor = "#FAFAFA"
+    page.theme_mode = ft.ThemeMode.LIGHT
+    page.padding = 0
+    page.auto_scroll = False
+
+    # Mostrar loading mientras carga
+    page.add(
+        ft.Container(
+            content=ft.Column([
+                ft.ProgressRing(color="#667EEA"),
+                ft.Container(height=16),
+                ft.Text("Cargando CRONUX...", color="#667EEA", size=16),
+            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+            expand=True,
+            alignment=ft.alignment.center,
+            bgcolor="#FAFAFA",
+        )
+    )
+    page.update()
+
+    # 3. Importar módulos (después de configurar paths)
+    try:
+        from screens.home_screen import HomeScreen
+        from screens.wizard_screen import WizardScreen
+        from cli_integration import (
+            crear_proyecto_ui, leer_info_proyecto,
+            cargar_lista_proyectos, guardar_lista_proyectos
+        )
+        print("[OK] Módulos importados correctamente")
+    except Exception as e:
+        import traceback
+        print(f"[ERROR] Fallo importando módulos: {e}")
+        traceback.print_exc()
+        page.controls.clear()
+        page.add(
+            ft.Container(
+                content=ft.Column([
+                    ft.Icon(ft.Icons.ERROR_OUTLINE, size=64, color="#F56565"),
+                    ft.Container(height=16),
+                    ft.Text("Error al iniciar CRONUX", size=20, weight=ft.FontWeight.BOLD, color="#2D3748"),
+                    ft.Container(height=8),
+                    ft.Text(str(e), size=13, color="#718096", text_align=ft.TextAlign.CENTER),
+                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                expand=True,
+                alignment=ft.alignment.center,
+                bgcolor="#FAFAFA",
+                padding=40,
+            )
+        )
+        page.update()
+        return
+
+    # 4. Configurar ventana completa
+    try:
+        page.window.width = 1200
+        page.window.height = 800
+        page.window.min_width = 1000
+        page.window.min_height = 700
+    except Exception as e:
+        print(f"[WARN] No se pudo configurar ventana: {e}")
+
+    # 5. Configurar icono según plataforma
+    try:
+        import platform
+        sistema = platform.system()
+        base = Path(__file__).parent
+
+        if sistema == "Windows":
+            candidatos = [
+                base / "assets" / "cronux_icon.ico",
+                base.parent / "assets" / "cronux_icon.ico",
+            ]
+        elif sistema == "Darwin":
+            candidatos = [
+                base / "assets" / "cronux_icon.icns",
+                base.parent / "assets" / "cronux_icon.icns",
+            ]
+        else:
+            candidatos = [
+                base / "assets" / "cronux_icon.png",
+                base.parent / "assets" / "cronux_icon.png",
+            ]
+
+        for icon_path in candidatos:
             if icon_path.exists():
-                self.page.window.icon = str(icon_path)
-                print(f"[ICON] Icono cargado: {icon_path}")
-            else:
-                print(f"[ICON] Icono no encontrado en: {icon_path}")
-        except Exception as e:
-            print(f"No se pudo cargar el icono: {e}")
-        
-        # Pantalla actual
-        self.current_screen = None
-        
-        # Cargar proyectos
-        print("Cargando proyectos...")
-        self.proyectos = cargar_lista_proyectos()
-        print(f"Proyectos cargados: {len(self.proyectos)}")
-        
-        # Mostrar pantalla de inicio
+                page.window.icon = str(icon_path)
+                print(f"[ICON] {icon_path}")
+                break
+    except Exception as e:
+        print(f"[WARN] Icono no cargado: {e}")
+
+    # 6. Iniciar la app
+    app = CronuxApp(page, cargar_lista_proyectos, crear_proyecto_ui,
+                    leer_info_proyecto, guardar_lista_proyectos,
+                    HomeScreen, WizardScreen)
+    app.start()
+
+
+class CronuxApp:
+    def __init__(self, page, cargar_lista_proyectos, crear_proyecto_ui,
+                 leer_info_proyecto, guardar_lista_proyectos,
+                 HomeScreen, WizardScreen):
+        self.page = page
+        self._cargar_lista = cargar_lista_proyectos
+        self._crear_proyecto = crear_proyecto_ui
+        self._leer_info = leer_info_proyecto
+        self._guardar_lista = guardar_lista_proyectos
+        self._HomeScreen = HomeScreen
+        self._WizardScreen = WizardScreen
+        self.proyectos = []
+
+    def start(self):
+        self.proyectos = self._cargar_lista()
         self.show_home()
-    
+
     def show_home(self):
-        """Muestra la pantalla de inicio"""
-        # Recargar lista de proyectos cada vez que se muestra el home
-        print("[HOME] Recargando lista de proyectos...")
-        self.proyectos = cargar_lista_proyectos()
-        print(f"[HOME] Proyectos cargados: {len(self.proyectos)}")
-        
-        self.current_screen = HomeScreen(
+        self.proyectos = self._cargar_lista()
+        screen = self._HomeScreen(
             page=self.page,
             on_new_project=self.show_wizard,
             on_open_project=self.show_project,
             proyectos=self.proyectos,
         )
-        
         self.page.controls.clear()
-        self.page.add(self.current_screen.build())
+        self.page.add(screen.build())
         self.page.update()
-    
+
     def show_wizard(self):
-        """Muestra el wizard"""
-        wizard = WizardScreen(
+        wizard = self._WizardScreen(
             page=self.page,
             on_close=self.show_home,
-            on_create=self._create_project,
+            on_create=self._handle_create,
         )
-        
         self.page.controls.clear()
         self.page.add(wizard.build())
         self.page.update()
-    
+
     def show_project(self, proyecto):
-        """Muestra la vista de un proyecto"""
-        from screens.project_screen_v2 import ProjectScreenV2
-        
-        project_screen = ProjectScreenV2(
-            page=self.page,
-            proyecto=proyecto,
-            on_back=self.show_home,
-            on_refresh=self._refresh_project,
-        )
-        
-        self.page.controls.clear()
-        self.page.add(project_screen.build())
-        self.page.update()
-    
-    def _refresh_project(self, ruta_proyecto):
-        """Refresca la información de un proyecto"""
-        # Buscar el proyecto en la lista
+        try:
+            from screens.project_screen_v2 import ProjectScreenV2
+            screen = ProjectScreenV2(
+                page=self.page,
+                proyecto=proyecto,
+                on_back=self.show_home,
+                on_refresh=self._refresh_project,
+            )
+            self.page.controls.clear()
+            self.page.add(screen.build())
+            self.page.update()
+        except Exception as e:
+            print(f"[ERROR] show_project: {e}")
+            self._show_error(f"Error abriendo proyecto: {e}")
+
+    def _refresh_project(self, ruta):
         for i, p in enumerate(self.proyectos):
-            if p["ruta"] == ruta_proyecto:
-                # Leer información actualizada (el icono se genera automáticamente)
-                proyecto_actualizado = leer_info_proyecto(ruta_proyecto)
-                if proyecto_actualizado:
-                    self.proyectos[i] = proyecto_actualizado
-                    
-                    # Guardar lista actualizada
-                    guardar_lista_proyectos(self.proyectos)
-                    
-                    return proyecto_actualizado
+            if p["ruta"] == ruta:
+                updated = self._leer_info(ruta)
+                if updated:
+                    self.proyectos[i] = updated
+                    self._guardar_lista(self.proyectos)
+                    return updated
         return None
 
-    def _create_project(self, nombre, ruta, tipo, create_initial_version=True):
-        """Crea un nuevo proyecto con loader de progreso en tiempo real"""
+    def _handle_create(self, nombre, ruta, tipo, create_initial_version=True):
         from components.terminal_loader import TerminalLoaderView
-        
-        # Crear loader tipo terminal
-        terminal_loader = TerminalLoaderView(self.page, "Creando proyecto")
-        
-        # Crear dialog
-        progress_dialog = ft.AlertDialog(
+
+        loader = TerminalLoaderView(self.page, "Creando proyecto")
+        dialog = ft.AlertDialog(
             modal=True,
-            content=terminal_loader.build(),
+            content=loader.build(),
             shape=ft.RoundedRectangleBorder(radius=20),
             bgcolor="#F7FAFC",
         )
-        
-        self.page.overlay.append(progress_dialog)
-        progress_dialog.open = True
+        self.page.overlay.append(dialog)
+        dialog.open = True
         self.page.update()
-        
-        # Callback para actualizar progreso en tiempo real
-        def actualizar_progreso(mensaje):
-            """Callback que recibe mensajes de progreso de las funciones CLI"""
-            print(f"[PROGRESS] {mensaje}")
-            
-            # Agregar mensaje a la terminal
-            terminal_loader.add_message(mensaje)
-            terminal_loader.update_display()
-        
-        # Función async para crear el proyecto
-        async def crear_proyecto_async():
+
+        def on_progress(msg):
+            loader.add_message(msg)
+            loader.update_display()
+
+        async def run():
             import asyncio
-            
             try:
-                # Pequeña pausa inicial
                 await asyncio.sleep(0.2)
-                
-                # Crear proyecto con callback de progreso
-                proyecto_info = crear_proyecto_ui(nombre, ruta, tipo, actualizar_progreso)
-                
-                # Marcar como completado
-                terminal_loader.set_completed(success=bool(proyecto_info))
-                
-                # Pequeña pausa para ver el resultado
+                info = self._crear_proyecto(nombre, ruta, tipo, on_progress)
+                loader.set_completed(success=bool(info))
                 await asyncio.sleep(1.5)
-                
-                # Cerrar dialog
-                progress_dialog.open = False
+                dialog.open = False
                 self.page.update()
-                
-                if proyecto_info:
-                    # Recargar lista desde archivo (ya fue guardado por crear_proyecto_ui)
-                    self.proyectos = cargar_lista_proyectos()
-                    
-                    # Abrir directamente el proyecto creado
-                    self.show_project(proyecto_info)
+                if info:
+                    self.proyectos = self._cargar_lista()
+                    self.show_project(info)
                 else:
-                    # Error
-                    self._show_error_snackbar("Error al crear el proyecto")
-            
+                    self._show_error("Error al crear el proyecto")
             except Exception as e:
                 import traceback
-                error_detail = traceback.format_exc()
-                print(f"Error en creación: {error_detail}")
-                terminal_loader.set_completed(success=False)
-                terminal_loader.add_message(f"❌ Error: {str(e)}")
-                terminal_loader.update_display()
+                traceback.print_exc()
+                loader.set_completed(success=False)
+                loader.add_message(f"❌ Error: {e}")
+                loader.update_display()
                 await asyncio.sleep(2)
-                progress_dialog.open = False
+                dialog.open = False
                 self.page.update()
-                self._show_error_snackbar(f"Error: {str(e)}")
-        
-        # Ejecutar con run_task
-        self.page.run_task(crear_proyecto_async)
-    
-    def _show_error_snackbar(self, mensaje):
-        """Muestra un snackbar de error"""
-        snackbar = ft.SnackBar(
-            content=ft.Text(mensaje, color="#FFFFFF"),
+                self._show_error(str(e))
+
+        self.page.run_task(run)
+
+    def _show_error(self, msg):
+        snack = ft.SnackBar(
+            content=ft.Text(msg, color="#FFFFFF"),
             bgcolor="#F56565",
         )
-        self.page.overlay.append(snackbar)
-        snackbar.open = True
+        self.page.overlay.append(snack)
+        snack.open = True
         self.page.update()
 
 
-def main(page: ft.Page):
-    """Punto de entrada"""
-    import sys
-    
-    # En flet build, los assets se sirven automáticamente desde la carpeta assets/
-    # Solo necesitamos configurarlo en desarrollo
-    script_dir = Path(__file__).parent
-    assets_path = script_dir / "assets"
-    
-    if assets_path.exists():
-        page.assets_dir = "assets"
-        print(f"[ASSETS] assets_dir configurado")
-    
-    # IMPORTANTE: Configurar para que los updates sean inmediatos
-    page.auto_scroll = False
-    
-    CronuxUIv2(page)
- 
-
 if __name__ == "__main__":
-    ft.run(main)
+    ft.app(main)
