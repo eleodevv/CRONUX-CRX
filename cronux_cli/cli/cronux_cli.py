@@ -82,7 +82,7 @@ def cargar_config():
     # Configuración por defecto
     config_default = {
         "modo": "asistido",  # asistido o manual
-        "version": "0.2.1"
+        "version": "0.2.3"
     }
     
     if CONFIG_FILE.exists():
@@ -158,7 +158,7 @@ SPLASH = f"""
   ██║     ██╔══██╗██║   ██║██║╚████║██║   ██║ ██╔██╗ 
   ╚██████╗██║  ██║╚██████╔╝██║ ╚███║╚██████╔╝██╔╝╚██╗
    ╚═════╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚══╝ ╚═════╝ ╚═╝  ╚═╝
-{Color.RESET}{Color.GRAY}              Control de Versiones  v0.2.1{Color.RESET}
+{Color.RESET}{Color.GRAY}              Control de Versiones  v0.2.3{Color.RESET}
 """
 
 # ─────────────────────────────────────────────
