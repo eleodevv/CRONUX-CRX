@@ -4,7 +4,7 @@
 $ErrorActionPreference = "Stop"
 
 $REPO = "eleodevv/CRONUX-CRX"
-$VERSION = "v0.2.0"
+$VERSION = "v0.2.3"
 $INSTALL_DIR = "$env:ProgramFiles\Cronux-CRX"
 $CLI_DIR = "$INSTALL_DIR\cli"
 
