@@ -34,14 +34,26 @@ class CronuxUIv2:
         
         # Configurar icono de la ventana
         try:
-            icon_path = Path(__file__).parent.parent / "assets" / "cronux_icon.icns"
+            import platform
+            sistema = platform.system()
+            if sistema == "Windows":
+                icon_path = Path(__file__).parent.parent / "assets" / "cronux_icon.ico"
+                if not icon_path.exists():
+                    icon_path = Path(__file__).parent / "assets" / "cronux_icon.ico"
+            elif sistema == "Darwin":
+                icon_path = Path(__file__).parent.parent / "assets" / "cronux_icon.icns"
+                if not icon_path.exists():
+                    icon_path = Path(__file__).parent / "assets" / "cronux_icon.icns"
+            else:
+                icon_path = Path(__file__).parent.parent / "assets" / "cronux_icon.png"
+                if not icon_path.exists():
+                    icon_path = Path(__file__).parent / "assets" / "cronux_icon.png"
+
             if icon_path.exists():
                 self.page.window.icon = str(icon_path)
+                print(f"[ICON] Icono cargado: {icon_path}")
             else:
-                # Fallback a PNG si no existe ICNS
-                icon_png = Path(__file__).parent.parent / "assets" / "cronux_icon.png"
-                if icon_png.exists():
-                    self.page.window.icon = str(icon_png)
+                print(f"[ICON] Icono no encontrado en: {icon_path}")
         except Exception as e:
             print(f"No se pudo cargar el icono: {e}")
         
@@ -204,9 +216,16 @@ class CronuxUIv2:
 
 def main(page: ft.Page):
     """Punto de entrada"""
-    # Configurar assets
+    import sys
+    
+    # En flet build, los assets se sirven automáticamente desde la carpeta assets/
+    # Solo necesitamos configurarlo en desarrollo
     script_dir = Path(__file__).parent
-    page.assets_dir = str(script_dir / "assets")
+    assets_path = script_dir / "assets"
+    
+    if assets_path.exists():
+        page.assets_dir = "assets"
+        print(f"[ASSETS] assets_dir configurado")
     
     # IMPORTANTE: Configurar para que los updates sean inmediatos
     page.auto_scroll = False

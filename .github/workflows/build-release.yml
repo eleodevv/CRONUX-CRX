@@ -389,11 +389,12 @@ jobs:
           New-Item -ItemType Directory -Force -Path "cronux_cli/ui/cli"
           Copy-Item "cronux_cli/cli/*.py" -Destination "cronux_cli/ui/cli/"
           
-          Write-Host "📋 Archivos CLI copiados:"
-          Get-ChildItem -Path "cronux_cli/ui/cli"
-          
           Write-Host "🔨 Building GUI with Flet..."
           cd cronux_cli/ui
+          
+          # Copiar icono al directorio de assets de la UI
+          Copy-Item "../assets/cronux_icon.ico" -Destination "assets/cronux_icon.ico" -Force
+          Copy-Item "../assets/cronux_icon.png" -Destination "assets/cronux_icon.png" -Force
           
           flet build windows `
             --module-name "cronux_ui_v2" `
@@ -405,34 +406,25 @@ jobs:
             --bundle-id "dev.cronux.crx" `
             --description "Sistema de Control de Versiones Local" `
             --copyright "Copyright 2024 CRONUX-CRX" `
+            --icon "../assets/cronux_icon.png" `
             --yes `
             --no-rich-output
           
           cd ../..
           
-          Write-Host "📂 Buscando ejecutable en build/windows:"
-          Get-ChildItem -Path "cronux_cli/ui/build/windows" -Recurse -Filter "*.exe" | Select-Object FullName, Length
-          
           # Buscar el ejecutable generado por Flet
-          $exePath = Get-ChildItem -Path "cronux_cli/ui/build/windows" -Recurse -Filter "*.exe" | Select-Object -First 1
+          $exeFile = Get-ChildItem -Path "cronux_cli/ui/build/windows" -Recurse -Filter "*.exe" | Select-Object -First 1
           
-          if ($exePath) {
-            $size = $exePath.Length / 1MB
-            Write-Host "✅ GUI executable found: $($exePath.FullName) ($([math]::Round($size, 2)) MB)"
+          if ($exeFile) {
+            $appDir = Split-Path $exeFile.FullName -Parent
+            $size = $exeFile.Length / 1MB
+            Write-Host "✅ GUI executable: $($exeFile.Name) ($([math]::Round($size, 2)) MB)"
             
             New-Item -ItemType Directory -Force -Path "dist"
-            
-            # Copiar el ejecutable
-            Copy-Item $exePath.FullName -Destination "dist/CRONUX-CRX.exe"
-            
-            # Comprimir toda la carpeta build/windows para incluir dependencias
-            Write-Host "📦 Comprimiendo aplicación completa..."
-            $buildDir = Split-Path $exePath.FullName -Parent
-            Compress-Archive -Path "$buildDir\*" -DestinationPath "dist/CRONUX-CRX-Windows.zip" -Force
+            Compress-Archive -Path "$appDir\*" -DestinationPath "dist/CRONUX-CRX-Windows.zip" -Force
             Write-Host "✅ ZIP creado"
           } else {
             Write-Host "❌ GUI executable not found"
-            Write-Host "📂 Contenido de build:"
             Get-ChildItem -Path "cronux_cli/ui/build" -Recurse | Select-Object FullName
             exit 1
           }
@@ -452,7 +444,6 @@ jobs:
           path: |
             dist/*.exe
             dist/*.zip
-
   # ── Release ────────────────────────────────────────────
   release:
     needs: [build-linux, build-macos, build-windows]
