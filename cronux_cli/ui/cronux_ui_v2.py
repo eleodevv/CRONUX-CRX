@@ -32,6 +32,19 @@ class CronuxUIv2:
         self.page.bgcolor = "#FAFAFA"
         self.page.theme_mode = ft.ThemeMode.LIGHT
         
+        # Configurar icono de la ventana
+        try:
+            icon_path = Path(__file__).parent.parent / "assets" / "cronux_icon.icns"
+            if icon_path.exists():
+                self.page.window.icon = str(icon_path)
+            else:
+                # Fallback a PNG si no existe ICNS
+                icon_png = Path(__file__).parent.parent / "assets" / "cronux_icon.png"
+                if icon_png.exists():
+                    self.page.window.icon = str(icon_png)
+        except Exception as e:
+            print(f"No se pudo cargar el icono: {e}")
+        
         # Pantalla actual
         self.current_screen = None
         
