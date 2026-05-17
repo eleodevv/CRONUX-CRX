@@ -37,13 +37,46 @@ Write-Color "  Versión:    $VERSION" "Gray"
 Write-Color "  Destino:    $INSTALL_DIR" "Gray"
 Write-Host ""
 
-# Verificar Python
+# Verificar Python e instalar si no está
+Write-Color "  → Verificando Python..." "Gray"
+$pythonOk = $false
 try {
     $pythonVersion = (python --version 2>&1) -replace "Python ", ""
-    Write-Color "  ✓ Python $pythonVersion encontrado" "Green"
-} catch {
-    Write-Color "✗ Python 3 no encontrado. Instálalo desde python.org" "Red"
-    exit 1
+    if ($pythonVersion -match "^\d") {
+        Write-Color "  ✓ Python $pythonVersion encontrado" "Green"
+        $pythonOk = $true
+    }
+} catch { }
+
+if (-not $pythonOk) {
+    Write-Color "  ⚠ Python no encontrado. Instalando automáticamente..." "Yellow"
+    
+    $pythonInstaller = "$env:TEMP\python_installer.exe"
+    $pythonUrl = "https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe"
+    
+    try {
+        Write-Color "  → Descargando Python 3.11..." "Gray"
+        Invoke-WebRequest -Uri $pythonUrl -OutFile $pythonInstaller -UseBasicParsing
+        
+        Write-Color "  → Instalando Python 3.11 (puede tardar un momento)..." "Gray"
+        $proc = Start-Process -FilePath $pythonInstaller -ArgumentList "/quiet", "InstallAllUsers=1", "PrependPath=1", "Include_test=0" -Wait -PassThru
+        
+        if ($proc.ExitCode -eq 0) {
+            # Recargar PATH para que python esté disponible
+            $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+            Write-Color "  ✓ Python instalado correctamente" "Green"
+        } else {
+            Write-Color "✗ Error instalando Python (código $($proc.ExitCode))" "Red"
+            Write-Color "  Instálalo manualmente desde https://python.org y vuelve a ejecutar este script" "Yellow"
+            exit 1
+        }
+        
+        Remove-Item $pythonInstaller -Force -ErrorAction SilentlyContinue
+    } catch {
+        Write-Color "✗ No se pudo descargar Python: $_" "Red"
+        Write-Color "  Instálalo manualmente desde https://python.org y vuelve a ejecutar este script" "Yellow"
+        exit 1
+    }
 }
 
 # Crear directorio de instalación
