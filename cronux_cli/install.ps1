@@ -102,10 +102,8 @@ $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine")
 
 # Verificar instalación
 Write-Host ""
-Write-Color "✓ CRONUX-CRX CLI instalado correctamente" "Green" -NoNewline
-Write-Host ""
+Write-Color "✓ CRONUX-CRX CLI instalado correctamente" "Green"
 Write-Host ""
 Write-Color "  IMPORTANTE: Cierra y abre una nueva terminal" "Yellow"
-Write-Color "  Luego ejecuta: " "Gray" -NoNewline
-Write-Color "cronux ayuda" "Cyan"
+Write-Color "  Luego ejecuta: cronux ayuda" "Cyan"
 Write-Host ""
